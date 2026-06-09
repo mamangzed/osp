@@ -1,0 +1,16 @@
+[package]
+name = "examples-multi-device"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Two devices on the same user, both syncing via the server. Demonstrates snapshot+delta."
+
+[dependencies]
+owl-client = { workspace = true }
+owl-types = { workspace = true }
+owl-protocol = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }

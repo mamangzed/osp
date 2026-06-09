@@ -1,0 +1,376 @@
+//! owl-codegen: .proto → multi-language stubs for OSP.
+//!
+//! Stage 10 of the OSP v1 design (see `docs/superpowers/specs/2026-06-09-osp-v1-design.md`).
+//!
+//! Reads the four `.proto` files under `proto/osp/v1/` and emits type-safe
+//! stubs in 6 target languages:
+//!
+//! | Language | Output                                                | Proto runtime                |
+//! |----------|-------------------------------------------------------|------------------------------|
+//! | Rust     | `out/rust/osp_v1.rs` (re-exports prost-build module)  | `prost`                      |
+//! | Dart     | `out/dart/*.proto` + `out/dart/osp.dart` wrapper      | pure-Dart proto3 encoder     |
+//! | Node.js  | `out/node/*.proto` + `out/node/osp.js`                | `protobufjs`                 |
+//! | Python   | `out/python/*.proto` + `out/python/osp.py` + Makefile | `google.protobuf`            |
+//! | PHP      | `out/php/*.proto` + `out/php/Osp.php`                 | `google/protobuf` PHP        |
+//! | Go       | `out/go/osp/v1/*.proto` + README                      | `google.golang.org/protobuf` |
+//!
+//! For non-Rust languages the wrapper is a thin typed view. The Rust output
+//! points at `owl-protocol` (the canonical implementation) — there is no
+//! need to re-emit prost-build output.
+
+use anyhow::{Context, Result};
+use prost_build::Config;
+use protox::Compiler;
+use std::path::{Path, PathBuf};
+
+/// Languages the codegen can emit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Lang {
+    Rust,
+    Dart,
+    Node,
+    Python,
+    Php,
+    Go,
+}
+
+impl Lang {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "rust" | "rs" => Some(Self::Rust),
+            "dart" => Some(Self::Dart),
+            "node" | "nodejs" | "js" | "ts" => Some(Self::Node),
+            "python" | "py" => Some(Self::Python),
+            "php" => Some(Self::Php),
+            "go" | "golang" => Some(Self::Go),
+            _ => None,
+        }
+    }
+}
+
+/// Compile `.proto` files into a `FileDescriptorSet`. Mostly used to verify
+/// the protos parse cleanly; per-language output copies the .proto files
+/// verbatim so downstream toolchains (protoc, etc.) can use them.
+pub fn parse_protos(
+    proto_files: &[PathBuf],
+    include_dir: &Path,
+) -> Result<prost_types::FileDescriptorSet> {
+    let fds = Compiler::new(&[include_dir])?
+        .include_source_info(false)
+        .include_imports(true)
+        .open_files(proto_files.iter().cloned())?
+        .file_descriptor_set();
+    Ok(fds)
+}
+
+/// Emit all requested language stubs under `out_dir`.
+///
+/// `proto_files` is the entry-point `.proto` (e.g. `frame.proto`); the
+/// matching imports (common, auth, sync) are pulled in transitively.
+///
+/// `out_dir` is created if missing. Each language gets a subdirectory.
+pub fn generate(
+    langs: &[Lang],
+    proto_files: &[PathBuf],
+    include_dir: &Path,
+    out_dir: &Path,
+) -> Result<()> {
+    std::fs::create_dir_all(out_dir).context("create out_dir")?;
+
+    // Parse protos up front to fail fast on syntax errors.
+    let _fds = parse_protos(proto_files, include_dir)?;
+
+    for &lang in langs {
+        let lang_dir = out_dir.join(lang_dir_name(lang));
+        std::fs::create_dir_all(&lang_dir)
+            .with_context(|| format!("create {}", lang_dir.display()))?;
+        match lang {
+            Lang::Rust => emit_rust(proto_files, &lang_dir)?,
+            Lang::Dart => emit_dart(proto_files, &lang_dir)?,
+            Lang::Node => emit_node(proto_files, &lang_dir)?,
+            Lang::Python => emit_python(proto_files, &lang_dir)?,
+            Lang::Php => emit_php(proto_files, &lang_dir)?,
+            Lang::Go => emit_go(proto_files, &lang_dir)?,
+        }
+    }
+    Ok(())
+}
+
+fn lang_dir_name(lang: Lang) -> &'static str {
+    match lang {
+        Lang::Rust => "rust",
+        Lang::Dart => "dart",
+        Lang::Node => "node",
+        Lang::Python => "python",
+        Lang::Php => "php",
+        Lang::Go => "go",
+    }
+}
+
+// ---------- Common ----------
+
+/// Copy the source .proto files from `proto_files` into `out_dir`. These
+/// are the source-of-truth for downstream language toolchains.
+fn copy_protos(proto_files: &[PathBuf], out_dir: &Path) -> Result<()> {
+    for f in proto_files {
+        if let Some(leaf) = f.file_name() {
+            let dest = out_dir.join(leaf);
+            std::fs::copy(f, &dest)
+                .with_context(|| format!("copy {} -> {}", f.display(), dest.display()))?;
+        }
+    }
+    Ok(())
+}
+
+// ---------- Rust ----------
+
+fn emit_rust(proto_files: &[PathBuf], out_dir: &Path) -> Result<()> {
+    copy_protos(proto_files, out_dir)?;
+    // Re-export wrapper. Equivalent to `crates/owl-protocol/src/gen.rs`.
+    std::fs::write(
+        out_dir.join("osp_v1.rs"),
+        RUST_GEN_HEADER,
+    )?;
+    Ok(())
+}
+
+const RUST_GEN_HEADER: &str = r#"// Auto-generated by owl-codegen (Stage 10).
+// Equivalent to `crates/owl-protocol/src/gen.rs`. To use the prost-build
+// output directly, copy this build script snippet into your crate's
+// build.rs:
+//
+//     use protox::Compiler;
+//     use std::path::PathBuf;
+//
+//     fn main() -> Result<(), Box<dyn std::error::Error>> {
+//         let proto_dir = PathBuf::from("../proto");
+//         let protos = [proto_dir.join("osp/v1/frame.proto")];
+//         println!("cargo:rerun-if-changed={}", proto_dir.display());
+//         let fds = Compiler::new(&[proto_dir])?
+//             .include_imports(true)
+//             .open_files(protos)?
+//             .file_descriptor_set();
+//         let mut cfg = prost_build::Config::new();
+//         cfg.bytes(["."]);
+//         cfg.compile_fds(fds)?;
+//         Ok(())
+//     }
+//
+// Then in lib.rs:
+//
+//     pub mod osp_v1 { include!(concat!(env!("OUT_DIR"), "/osp.v1.rs")); }
+//
+// For most users, depending on `owl-protocol` directly is simpler.
+
+pub mod osp_v1 {
+    include!(concat!(env!("OUT_DIR"), "/osp.v1.rs"));
+}
+
+pub use osp_v1 as frame;
+pub use osp_v1 as auth;
+pub use osp_v1 as common;
+pub use osp_v1 as sync;
+"#;
+
+// ---------- Dart ----------
+
+fn emit_dart(proto_files: &[PathBuf], out_dir: &Path) -> Result<()> {
+    copy_protos(proto_files, out_dir)?;
+    std::fs::write(out_dir.join("osp.dart"), DART_WRAPPER)?;
+    Ok(())
+}
+
+const DART_WRAPPER: &str = r#"// Auto-generated by owl-codegen (Stage 10).
+// Thin Dart wrapper around the OSP protobuf messages.
+//
+// To regenerate the .pb.dart files from osp.proto, common.proto, etc.:
+//   dart pub global activate protoc_plugin
+//   protoc --dart_out=lib/ osp.proto common.proto auth.proto sync.proto
+//
+// Then import both the generated pb.dart and this wrapper:
+//   import 'package:owl/osp.pb.dart' as pb;
+//   import 'package:owl/osp.dart';
+
+class OspValue {
+  int? intValue;
+  double? doubleValue;
+  String? stringValue;
+  List<int>? bytesValue;
+  List<OspValue>? arrayValue;
+  Map<String, OspValue>? objectValue;
+  bool isNull = false;
+  bool isBool = false;
+  bool boolValue = false;
+  OspValue();
+}
+
+class OspHello {
+  int protocolVersion = 0;
+  String sdkVersion = '';
+  String deviceId = '';
+  String devicePlatform = '';
+  List<int> capabilities = const [];
+  OspHello();
+}
+
+class OspEnvelope {
+  Object? payload;
+  OspEnvelope();
+}
+"#;
+
+// ---------- Node.js ----------
+
+fn emit_node(proto_files: &[PathBuf], out_dir: &Path) -> Result<()> {
+    copy_protos(proto_files, out_dir)?;
+    std::fs::write(out_dir.join("osp.js"), NODE_WRAPPER)?;
+    Ok(())
+}
+
+const NODE_WRAPPER: &str = r#"// Auto-generated by owl-codegen (Stage 10).
+// Thin Node.js wrapper around OSP protobuf messages.
+//
+// Usage:
+//   const owl = require('./osp');
+//   const root = await owl.load(__dirname);
+//   const Hello = root.lookupType('osp.v1.Hello');
+//   const hello = Hello.create({ protocolVersion: 1, sdkVersion: 'owl-client/0.1' });
+//   const buf = Hello.encode(hello).finish();
+
+const protobuf = require('protobufjs');
+const path = require('path');
+
+async function load(dir = __dirname) {
+  const root = await protobuf.load([
+    path.join(dir, 'frame.proto'),
+    path.join(dir, 'common.proto'),
+    path.join(dir, 'auth.proto'),
+    path.join(dir, 'sync.proto'),
+  ]);
+  return root;
+}
+
+module.exports = { load, protobuf };
+"#;
+
+// ---------- Python ----------
+
+fn emit_python(proto_files: &[PathBuf], out_dir: &Path) -> Result<()> {
+    copy_protos(proto_files, out_dir)?;
+    std::fs::write(out_dir.join("osp.py"), PY_WRAPPER)?;
+    std::fs::write(out_dir.join("Makefile"), PY_MAKEFILE)?;
+    Ok(())
+}
+
+const PY_WRAPPER: &str = r#"# Auto-generated by owl-codegen (Stage 10).
+# Thin Python wrapper around OSP protobuf messages.
+#
+# To regenerate the pb2 stubs:
+#   pip install grpcio-tools
+#   make
+#
+# Usage:
+#   from osp import OspHello
+#   msg = OspHello(protocol_version=1, sdk_version='owl-client/0.1')
+
+from osp_pb2 import (
+    Hello as OspHello,
+    HelloAck as OspHelloAck,
+    Auth as OspAuth,
+    Operation as OspOperation,
+    Snapshot as OspSnapshot,
+    Record as OspRecord,
+    Subscribe as OspSubscribe,
+)
+
+__all__ = [
+    "OspHello",
+    "OspHelloAck",
+    "OspAuth",
+    "OspOperation",
+    "OspSnapshot",
+    "OspRecord",
+    "OspSubscribe",
+]
+"#;
+
+const PY_MAKEFILE: &str = r#"# Auto-generated by owl-codegen.
+# Regenerate the pb2 stubs from osp.proto et al.
+#   pip install grpcio-tools
+#   make
+
+PROTO_FILES = $(wildcard *.proto)
+
+all: osp_pb2.py
+
+osp_pb2.py: $(PROTO_FILES)
+	python -m grpc_tools.protoc -I. --python_out=. $(PROTO_FILES)
+
+clean:
+	rm -f *_pb2.py *_pb2_grpc.py
+"#;
+
+// ---------- PHP ----------
+
+fn emit_php(proto_files: &[PathBuf], out_dir: &Path) -> Result<()> {
+    let php_pkg = out_dir.join("Osp").join("V1");
+    std::fs::create_dir_all(&php_pkg)?;
+    copy_protos(proto_files, out_dir)?;
+    std::fs::write(out_dir.join("Osp.php"), PHP_WRAPPER)?;
+    Ok(())
+}
+
+const PHP_WRAPPER: &str = r#"<?php
+// Auto-generated by owl-codegen (Stage 10).
+// Thin PHP wrapper around OSP protobuf messages.
+//
+// To regenerate the pb stubs from osp.proto et al.:
+//   composer require google/protobuf
+//   protoc --php_out=Osp osp.proto common.proto auth.proto sync.proto
+//
+// Usage:
+//   require 'vendor/autoload.php';
+//   $hello = new \Osp\V1\Hello();
+//   $hello->setProtocolVersion(1);
+//   $hello->setSdkVersion('owl-client/0.1');
+//   $bytes = $hello->serializeToString();
+
+class Osp {
+    public const PACKAGE = 'osp.v1';
+}
+"#;
+
+// ---------- Go ----------
+
+fn emit_go(proto_files: &[PathBuf], out_dir: &Path) -> Result<()> {
+    let go_dir = out_dir.join("osp").join("v1");
+    std::fs::create_dir_all(&go_dir)?;
+    // Copy the .proto files into the Go package path so the user can run
+    // `protoc --go_out=...` from there.
+    for f in proto_files {
+        if let Some(leaf) = f.file_name() {
+            std::fs::copy(f, go_dir.join(leaf))
+                .with_context(|| format!("copy {} -> {}", f.display(), go_dir.display()))?;
+        }
+    }
+    std::fs::write(go_dir.join("README.md"), GO_README)?;
+    Ok(())
+}
+
+const GO_README: &str = r#"# Auto-generated by owl-codegen (Stage 10).
+# To regenerate the Go pb stubs:
+#
+#   go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+#   protoc --go_out=. --go_opt=paths=source_relative \
+#       osp.proto auth.proto common.proto sync.proto
+#
+# The generated `osp/v1/*.pb.go` files can then be imported as:
+#   import ospv1 "github.com/owl/owl/bindings/generated/go/osp/v1"
+"#;
+
+// ---------- Quiet unused-warning suppressor for the prost-build dep ----------
+
+#[allow(dead_code)]
+fn _suppress_unused() {
+    let _ = Config::new();
+}

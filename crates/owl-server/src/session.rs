@@ -1,10 +1,11 @@
 //! Per-connection session state on the server side.
 
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use owl_auth::Claims;
 use owl_protocol::OperationMsg;
 use owl_types::{CollectionId, DeviceId, Lamport, RecordId};
 use std::sync::Arc;
+use tokio::sync::mpsc;
 
 /// State for a single connected client.
 #[derive(Debug)]
@@ -16,17 +17,23 @@ pub struct Session {
     pub last_seen_lamport: DashMap<CollectionId, Lamport>,
     /// Active subscription IDs.
     pub subscriptions: parking_lot::Mutex<Vec<String>>,
+    /// Outbound envelope channel. The connection's read loop also drains this
+    /// and writes to the wire, enabling server fan-out across sessions.
+    pub tx: mpsc::UnboundedSender<owl_protocol::Envelope>,
 }
 
 impl Session {
-    pub fn new(id: uuid::Uuid, device_id: DeviceId, claims: Claims) -> Arc<Self> {
-        Arc::new(Self {
+    pub fn new(id: uuid::Uuid, device_id: DeviceId, claims: Claims) -> (Arc<Self>, mpsc::UnboundedReceiver<owl_protocol::Envelope>) {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let s = Arc::new(Self {
             id,
             device_id,
             claims,
             last_seen_lamport: DashMap::new(),
             subscriptions: parking_lot::Mutex::new(Vec::new()),
-        })
+            tx,
+        });
+        (s, rx)
     }
 
     pub fn observe_lamport(&self, coll: &CollectionId, lamport: u64) {
@@ -53,6 +60,11 @@ impl Session {
 pub struct Router {
     /// subscription_id -> set of sessions
     subs: DashMap<String, Vec<Arc<Session>>>,
+    /// collection_id -> set of sessions
+    coll_subs: DashMap<CollectionId, Vec<Arc<Session>>>,
+    /// All collections the server knows about (set on first subscribe).
+    /// Snapshot task uses this to enumerate.
+    collections: DashSet<CollectionId>,
 }
 
 impl Router {
@@ -60,25 +72,34 @@ impl Router {
         Self::default()
     }
 
-    pub fn subscribe(&self, sub_id: String, session: Arc<Session>) {
-        self.subs.entry(sub_id).or_default().push(session);
+    pub fn subscribe(&self, sub_id: String, collection: CollectionId, session: Arc<Session>) {
+        self.subs.entry(sub_id).or_default().push(session.clone());
+        self.coll_subs.entry(collection.clone()).or_default().push(session);
+        self.collections.insert(collection);
     }
 
     pub fn unsubscribe(&self, sub_id: &str, session_id: uuid::Uuid) {
         if let Some(mut v) = self.subs.get_mut(sub_id) {
             v.retain(|s| s.id != session_id);
         }
+        // Note: we don't remove the collection from `collections` even if the
+        // last subscriber leaves. The snapshot task will skip empty collections
+        // because list_collection returns [] for them.
+    }
+
+    /// Snapshot of all collections that have ever been subscribed to.
+    pub fn collection_list(&self) -> Vec<CollectionId> {
+        self.collections.iter().map(|c| c.key().clone()).collect()
     }
 
     pub fn fan_out(&self, op: &OperationMsg) -> Vec<Arc<Session>> {
-        // Naive v1 routing: broadcast to ALL sessions (no per-collection sub map).
-        // Server-side query filtering is in scope for a later phase; for v1 we
-        // accept oversharing at the server and let clients filter.
-        // Future: maintain `subs: DashMap<CollectionId, Vec<(sub_id, session)>>`.
-        let _ = (op.collection.clone(), op.record_id.clone()); // suppress warnings
+        // v1 routing: scope to subscribers of the matching collection. Server-side
+        // query filtering is still in scope for a later phase; for v1 we
+        // accept oversharing within a collection and let clients filter.
+        let coll = CollectionId::new(op.collection.clone());
         let mut out: Vec<Arc<Session>> = Vec::new();
-        for kv in self.subs.iter() {
-            for s in kv.value().iter() {
+        if let Some(v) = self.coll_subs.get(&coll) {
+            for s in v.value().iter() {
                 out.push(s.clone());
             }
         }

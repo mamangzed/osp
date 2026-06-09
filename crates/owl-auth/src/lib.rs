@@ -53,17 +53,40 @@ pub trait TokenValidator: Send + Sync {
     }
 }
 
-/// JWT (HS256) validator.
+/// JWT validator. Supports both HS256 (shared secret) and RS256 (asymmetric).
+///
+/// `JwtValidator::new(secret)` returns an HS256 validator.
+/// `JwtValidator::with_rsa_public_key(pem)` returns an RS256 validator.
 pub struct JwtValidator {
-    secret: Vec<u8>,
+    inner: JwtKey,
     /// Optional clock skew tolerance in seconds (default 60).
     leeway: u64,
 }
 
+enum JwtKey {
+    /// HS256 shared secret.
+    Hmac(Vec<u8>),
+    /// RS256 public key in PEM format.
+    RsaPublicPem(Vec<u8>),
+}
+
 impl JwtValidator {
+    /// HS256 validator with a shared secret.
     pub fn new(secret: impl Into<Vec<u8>>) -> Self {
-        Self { secret: secret.into(), leeway: 60 }
+        Self {
+            inner: JwtKey::Hmac(secret.into()),
+            leeway: 60,
+        }
     }
+
+    /// RS256 validator with a public key in PEM format.
+    pub fn with_rsa_public_key(pem: impl Into<Vec<u8>>) -> Self {
+        Self {
+            inner: JwtKey::RsaPublicPem(pem.into()),
+            leeway: 60,
+        }
+    }
+
     pub fn with_leeway(mut self, seconds: u64) -> Self {
         self.leeway = seconds;
         self
@@ -73,8 +96,15 @@ impl JwtValidator {
 impl TokenValidator for JwtValidator {
     fn validate(&self, token: &str) -> AuthResult<Claims> {
         use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
-        let key = DecodingKey::from_secret(&self.secret);
-        let mut v = Validation::new(Algorithm::HS256);
+        let (key, alg) = match &self.inner {
+            JwtKey::Hmac(secret) => (DecodingKey::from_secret(secret), Algorithm::HS256),
+            JwtKey::RsaPublicPem(pem) => {
+                let key = DecodingKey::from_rsa_pem(pem)
+                    .map_err(|e| AuthError::Invalid(format!("rsa pem: {}", e)))?;
+                (key, Algorithm::RS256)
+            }
+        };
+        let mut v = Validation::new(alg);
         v.leeway = self.leeway;
         let data = decode::<JwtClaims>(token, &key, &v).map_err(|e| match e.kind() {
             jsonwebtoken::errors::ErrorKind::ExpiredSignature => AuthError::Expired,
@@ -223,6 +253,54 @@ mod tests {
         let got = v.validate("key-1").unwrap();
         assert_eq!(got.device_id, d);
         assert!(v.validate("key-2").is_err());
+    }
+
+    #[test]
+    fn rs256_round_trip() {
+        use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+        use rsa::pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding};
+        use rsa::traits::PublicKeyParts;
+        use rsa::{RsaPrivateKey, RsaPublicKey};
+
+        // Generate a fresh 2048-bit RSA key pair.
+        let mut rng = rand::thread_rng();
+        let priv_key = RsaPrivateKey::new(&mut rng, 2048).unwrap();
+        let pub_key = RsaPublicKey::from(&priv_key);
+
+        // PEM-encode the keys.
+        let priv_pem = priv_key.to_pkcs8_pem(LineEnding::LF).unwrap();
+        let pub_pem = pub_key.to_public_key_pem(LineEnding::LF).unwrap();
+        let _ = priv_key.size();
+
+        // Sign a JWT with the private key.
+        let d = DeviceId::new();
+        let jc = JwtClaims {
+            sub: d.to_string(),
+            exp: chrono_now() + 3600,
+            iat: Some(chrono_now()),
+            collection_scopes: Some(vec!["orders".into()]),
+            user_id: Some("u42".into()),
+        };
+        let token = encode(
+            &Header::new(Algorithm::RS256),
+            &jc,
+            &EncodingKey::from_rsa_pem(priv_pem.as_bytes()).unwrap(),
+        )
+        .unwrap();
+
+        // Validate with the public key.
+        let v = JwtValidator::with_rsa_public_key(pub_pem.as_bytes());
+        let claims = v.validate(&token).unwrap();
+        assert_eq!(claims.device_id, d);
+        assert_eq!(claims.collection_scopes, vec!["orders"]);
+        assert_eq!(claims.user_id.as_deref(), Some("u42"));
+
+        // Wrong public key → reject.
+        let other_priv = RsaPrivateKey::new(&mut rng, 2048).unwrap();
+        let other_pub = RsaPublicKey::from(&other_priv);
+        let other_pem = other_pub.to_public_key_pem(LineEnding::LF).unwrap();
+        let v2 = JwtValidator::with_rsa_public_key(other_pem.as_bytes());
+        assert!(matches!(v2.validate(&token), Err(AuthError::Invalid(_))));
     }
 
     fn chrono_now() -> i64 {

@@ -64,12 +64,31 @@ impl ConnectionManager {
         Self { state, cfg }
     }
 
-    /// Open a new TCP connection, run HELLO, run AUTH. Returns the active
-    /// connection on success.
+    /// Open a new connection (plain TCP or TLS, depending on URL scheme),
+    /// run HELLO + AUTH. Returns the active connection on success.
     pub async fn connect(&self) -> ConnectResult<Arc<ActiveConnection>> {
-        let addr = parse_tcp_addr(&self.cfg.url)?;
-        debug!(%addr, "connecting");
-        let conn = owl_transport::connect_tcp(&addr).await.map_err(|e| ConnectError::Transport(e.to_string()))?;
+        let parsed = parse_url(&self.cfg.url)?;
+        debug!(addr = %parsed.addr, scheme = %parsed.scheme, "connecting");
+        let conn = match parsed.scheme {
+            UrlScheme::Tcp => {
+                owl_transport::connect_tcp(&parsed.addr)
+                    .await
+                    .map_err(|e| ConnectError::Transport(e.to_string()))?
+            }
+            UrlScheme::Tls => {
+                let server_name = self
+                    .cfg
+                    .tls
+                    .server_name
+                    .clone()
+                    .unwrap_or_else(|| parsed.host.clone());
+                let tls_cfg = crate::config::build_tls_client_config(&self.cfg.tls)
+                    .map_err(|e| ConnectError::Transport(format!("tls config: {}", e)))?;
+                owl_transport::tls::connect_tls(&parsed.addr, tls_cfg, &server_name)
+                    .await
+                    .map_err(|e| ConnectError::Transport(e.to_string()))?
+            }
+        };
         let conn = Arc::new(conn);
 
         // HELLO
@@ -139,15 +158,81 @@ impl ConnectionManager {
     }
 }
 
-fn parse_tcp_addr(url: &str) -> ConnectResult<String> {
-    // Accepts: tcp://host:port, tls://host:port (TLS in v2), host:port
-    if let Some(rest) = url.strip_prefix("tcp://") {
-        Ok(rest.to_string())
-    } else if let Some(rest) = url.strip_prefix("tls://") {
-        // v1: TLS not wired; fall back to plain TCP. Surface a warning.
-        warn!("TLS requested but not wired in v1; using plain TCP");
-        Ok(rest.to_string())
+/// URL scheme → transport selector.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UrlScheme {
+    Tcp,
+    Tls,
+}
+
+impl std::fmt::Display for UrlScheme {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UrlScheme::Tcp => f.write_str("tcp"),
+            UrlScheme::Tls => f.write_str("tls"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ParsedUrl {
+    /// `host:port` (no scheme).
+    addr: String,
+    /// Just the host portion, used as the SNI default.
+    host: String,
+    scheme: UrlScheme,
+}
+
+/// Parse `tcp://host:port`, `tls://host:port`, or bare `host:port` into a
+/// transport selector + address. Bare addresses default to TCP.
+fn parse_url(url: &str) -> ConnectResult<ParsedUrl> {
+    let (scheme, rest) = if let Some(r) = url.strip_prefix("tls://") {
+        (UrlScheme::Tls, r)
+    } else if let Some(r) = url.strip_prefix("tcp://") {
+        (UrlScheme::Tcp, r)
     } else {
-        Ok(url.to_string())
+        (UrlScheme::Tcp, url)
+    };
+    // Strip any trailing path/query.
+    let addr = rest.split(['/', '?']).next().unwrap_or(rest).to_string();
+    let host = addr
+        .rsplit_once(':')
+        .map(|(h, _)| h.to_string())
+        .unwrap_or_else(|| addr.clone());
+    Ok(ParsedUrl { addr, host, scheme })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_tcp_explicit() {
+        let p = parse_url("tcp://127.0.0.1:9420").unwrap();
+        assert_eq!(p.scheme, UrlScheme::Tcp);
+        assert_eq!(p.addr, "127.0.0.1:9420");
+        assert_eq!(p.host, "127.0.0.1");
+    }
+
+    #[test]
+    fn parse_tls_selects_tls() {
+        let p = parse_url("tls://server.example.com:9420").unwrap();
+        assert_eq!(p.scheme, UrlScheme::Tls);
+        assert_eq!(p.addr, "server.example.com:9420");
+        assert_eq!(p.host, "server.example.com");
+    }
+
+    #[test]
+    fn parse_bare_defaults_to_tcp() {
+        let p = parse_url("server.example.com:9420").unwrap();
+        assert_eq!(p.scheme, UrlScheme::Tcp);
+        assert_eq!(p.addr, "server.example.com:9420");
+    }
+
+    #[test]
+    fn parse_strips_trailing_path() {
+        let p = parse_url("tls://server:9420/some/path?x=1").unwrap();
+        assert_eq!(p.scheme, UrlScheme::Tls);
+        assert_eq!(p.addr, "server:9420");
     }
 }

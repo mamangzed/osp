@@ -20,6 +20,10 @@ default-members = [
     "crates/owl-client",
     "crates/owl-codegen",
     "crates/owl-cli",
+    "examples/chat",
+    "examples/todo",
+    "examples/multi-device",
+    "bindings/generators",
 ]
 members = [
     "crates/owl-types",
@@ -34,6 +38,10 @@ members = [
     "crates/owl-codegen",
     "crates/owl-cli",
     "crates/owl-php",
+    "examples/chat",
+    "examples/todo",
+    "examples/multi-device",
+    "bindings/generators",
 ]
 
 [workspace.package]

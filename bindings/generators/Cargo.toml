@@ -1,0 +1,16 @@
+[package]
+name = "bindings-generators"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Stage 13 — thin wrapper around owl-codegen that produces language-specific bindings."
+
+[[bin]]
+name = "bindings-generators"
+path = "src/main.rs"
+
+[dependencies]
+owl-codegen = { path = "../../crates/owl-codegen" }
+clap = { workspace = true }
+anyhow = { workspace = true }

@@ -1,8 +1,7 @@
 //! OWL CLI.
 
 use clap::{Parser, Subcommand};
-use owl_auth::JwtValidator;
-use owl_client::{OwlClient, OwlClientBuilder};
+use owl_client::OwlClientBuilder;
 use owl_types::DeviceId;
 use owl_server::config::Config as ServerConfig;
 use serde_json::Value as JsonValue;
@@ -46,14 +45,34 @@ enum Cmd {
     },
     /// Client commands.
     Client {
-        /// Server URL
+        /// Server URL (tcp:// or tls://)
         #[arg(long, default_value = "tcp://127.0.0.1:9420")]
         url: String,
         /// Auth token
         #[arg(long)]
         token: String,
+        /// TLS: path to a PEM file with CA certificates to trust. Used only
+        /// when `--url` is `tls://...`.
+        #[arg(long, value_name = "PEM_FILE")]
+        tls_roots: Option<std::path::PathBuf>,
+        /// TLS: server name for SNI + cert verification. Defaults to the
+        /// host portion of the URL.
+        #[arg(long)]
+        tls_server_name: Option<String>,
         #[command(subcommand)]
         cmd: ClientCmd,
+    },
+    /// Generate multi-language stubs from .proto files (Stage 10).
+    Codegen {
+        /// Comma-separated languages: rust,dart,node,python,php,go
+        #[arg(long, default_value = "rust")]
+        lang: String,
+        /// Output directory (one subdir per language)
+        #[arg(long, default_value = "bindings/generated")]
+        out: std::path::PathBuf,
+        /// One or more .proto entry-point files (defaults to all under proto/osp/v1/)
+        #[arg(long)]
+        proto: Vec<std::path::PathBuf>,
     },
 }
 
@@ -91,6 +110,10 @@ enum ClientCmd {
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    // Codegen is synchronous, handle outside the async runtime.
+    if let Cmd::Codegen { lang, out, proto } = &cli.cmd {
+        return run_codegen(lang, out, proto);
+    }
     match cli.cmd {
         Cmd::Server { bind, db, jwt_secret } => {
             let cfg = ServerConfig {
@@ -135,12 +158,20 @@ async fn main() -> anyhow::Result<()> {
             let token = encode(&Header::new(Algorithm::HS256), &c, &EncodingKey::from_secret(secret.as_bytes()))?;
             println!("{}", token);
         }
-        Cmd::Client { url, token, cmd } => {
-            let client = OwlClientBuilder::new()
+        Cmd::Client { url, token, tls_roots, tls_server_name, cmd } => {
+            let mut builder = OwlClientBuilder::new()
                 .url(&url)
                 .token(&token)
-                .local_db(format!("owl-cli-{}.db", uuid::Uuid::new_v4()))
-                .build()?;
+                .local_db(format!("owl-cli-{}.db", uuid::Uuid::new_v4()));
+            if let Some(path) = tls_roots {
+                let pem = std::fs::read(&path)
+                    .map_err(|e| anyhow::anyhow!("read tls roots {}: {}", path.display(), e))?;
+                builder = builder.tls_roots_pem(pem);
+            }
+            if let Some(name) = tls_server_name {
+                builder = builder.tls_server_name(name);
+            }
+            let client = builder.build()?;
             client.connect().await?;
             match cmd {
                 ClientCmd::Set { collection, id, field, value } => {
@@ -184,6 +215,10 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             client.disconnect();
+        }
+        Cmd::Codegen { .. } => {
+            // Handled above by the early return.
+            unreachable!()
         }
     }
     Ok(())
@@ -236,4 +271,49 @@ fn value_to_json(v: &owl_protocol::Value) -> JsonValue {
             JsonValue::Object(out)
         }
     }
+}
+
+fn run_codegen(lang: &str, out: &std::path::Path, protos: &[std::path::PathBuf]) -> anyhow::Result<()> {
+    let langs: Vec<owl_codegen::Lang> = lang
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| owl_codegen::Lang::parse(s).ok_or_else(|| anyhow::anyhow!("unknown language: {}", s)))
+        .collect::<anyhow::Result<_>>()?;
+    if langs.is_empty() {
+        anyhow::bail!("no languages selected");
+    }
+    // Resolve protos: defaults to all four under proto/osp/v1/ at the workspace root.
+    let resolved_protos: Vec<std::path::PathBuf> = if protos.is_empty() {
+        // Walk up from current_exe to find the workspace root (Cargo.toml + proto/).
+        let mut p = std::env::current_exe()?;
+        let found = (0..8).find_map(|_| {
+            if p.pop() && p.join("Cargo.toml").exists() && p.join("proto").exists() {
+                Some(p.clone())
+            } else { None }
+        });
+        let root = found.ok_or_else(|| anyhow::anyhow!("workspace root not found"))?;
+        ["frame.proto", "auth.proto", "common.proto", "sync.proto"]
+            .iter()
+            .map(|n| root.join("proto").join("osp").join("v1").join(n))
+            .filter(|p| p.exists())
+            .collect()
+    } else {
+        protos.to_vec()
+    };
+    if resolved_protos.is_empty() {
+        anyhow::bail!("no .proto files found");
+    }
+    let first = resolved_protos.first().unwrap();
+    let mut include = first.clone();
+    include.pop(); // frame.proto
+    include.pop(); // v1
+    include.pop(); // osp
+    let protos_canon: Vec<_> = resolved_protos.into_iter()
+        .map(|p| p.canonicalize().unwrap_or(p))
+        .collect();
+    let include_canon = include.canonicalize().unwrap_or(include);
+    eprintln!("owl codegen: emitting {:?} to {}", langs, out.display());
+    owl_codegen::generate(&langs, &protos_canon, &include_canon, out)?;
+    Ok(())
 }

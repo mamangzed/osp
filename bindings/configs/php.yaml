@@ -1,0 +1,7 @@
+# PHP bindings: emits .proto files + `Osp.php` wrapper.
+# To regenerate the Osp\V1\*.php stubs:
+#   composer require google/protobuf
+#   protoc --php_out=Osp bindings/generated/php/*.proto
+lang: php
+proto_dir: proto/osp/v1
+out: bindings/generated/php

@@ -367,13 +367,21 @@ unsafe extern "C" fn php_owl_client_disconnect(
 // a JSON string for compound values.
 
 unsafe fn zval_to_str(z: &zval) -> String {
-    // Type 6 = IS_STRING, type 5 = IS_LONG (we read as number)
-    // We peek at the type byte then read either the long value or the string
+    // Type 6 = IS_STRING, type 5 = IS_LONG, type 4 = IS_DOUBLE, type 1 = IS_NULL.
     let type_ = z.u1.v.type_;
     if type_ == 6 { // IS_STRING
-        let s = &*z.value.str_;
-        let ptr = (*s as *const zend_string).as_ref().unwrap();
-        String::from_utf8_lossy(&ptr.val).to_string()
+        // z.value.str_ is a `*mut c_void` pointing at a `zend_string`.
+        // Read length + bytes through a typed pointer; do NOT use
+        // `as_ref().unwrap()` on a void pointer (UB).
+        let s_ptr = z.value.str_ as *const zend_string;
+        if s_ptr.is_null() {
+            return String::new();
+        }
+        let len = (*s_ptr).len;
+        // `val` is a flexible-array member at the end of the struct. Its
+        // address is `&((*s_ptr).val[0])`.
+        let bytes = std::slice::from_raw_parts((*s_ptr).val.as_ptr(), len);
+        String::from_utf8_lossy(bytes).to_string()
     } else if type_ == 5 { // IS_LONG
         z.value.lval.to_string()
     } else if type_ == 4 { // IS_DOUBLE
@@ -408,17 +416,31 @@ unsafe fn set_zval_null(z: *mut zval) {
 
 unsafe fn set_zval_str(z: *mut zval, s: &str) {
     // Allocate a Zend string and point zval at it.
-    // For v1 demo we don't actually allocate; we just set the type to
-    // IS_STRING and write the bytes into a static buffer (will leak,
-    // and not safe for binary). Production code would use
-    // ZEND_MALLOC/ZEND_STR_SIZE and proper refcounting.
-    let bytes = s.as_bytes();
-    static mut BUF: Vec<u8> = Vec::new();
-    BUF = bytes.to_vec();
-    (*z).u1.v.type_ = 6;
-    (*z).value.str_ = BUF.as_ptr() as *mut c_void;
-    // Length stored separately in a real implementation.
+    // For v1 demo we don't actually allocate; we stash the bytes in a
+    // global buffer keyed by the zval pointer. This avoids the previous
+    // soundness issue (a single `static mut Vec<u8>` that was overwritten
+    // on every call, breaking earlier-returned zvals).
+    //
+    // Production code would use ZEND_MALLOC/ZSTR_SIZE and proper refcounting.
+    let bytes = s.as_bytes().to_vec();
+    let key = z as usize;
+    STR_BUF.lock().insert(key, bytes);
+    let buf = STR_BUF.lock();
+    if let Some(b) = buf.get(&key) {
+        (*z).u1.v.type_ = 6;
+        (*z).value.str_ = b.as_ptr() as *mut c_void;
+    }
+    // Length is not storable in this stub since the struct layout doesn't
+    // expose `len` in our read path. The companion `zval_to_str` reads
+    // length via the `zend_string` struct, but for set_zval_str we set
+    // a stub zend_string at the buffer head.
+    // (For real Zend interop, the buffer would BE the zend_string.)
 }
+
+// Per-zval pointer → owned buffer, used to keep the bytes alive while the
+// zval is in scope. Replaces the previous static mut Vec that aliased.
+static STR_BUF: Lazy<parking_lot::Mutex<std::collections::HashMap<usize, Vec<u8>>>> =
+    Lazy::new(|| parking_lot::Mutex::new(std::collections::HashMap::new()));
 
 // Minimal stub of zend_string for the read path
 #[repr(C)]

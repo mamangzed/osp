@@ -1,0 +1,5 @@
+# Rust bindings: just re-uses owl-protocol. The generated `osp_v1.rs` is a
+# thin wrapper that points at the prost-build output under OUT_DIR.
+lang: rust
+proto_dir: proto/osp/v1
+out: bindings/generated/rust

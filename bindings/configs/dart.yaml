@@ -1,0 +1,7 @@
+# Dart bindings: emits .proto files + a hand-written `osp.dart` wrapper.
+# To generate the .pb.dart files, install protoc_plugin and run:
+#   dart pub global activate protoc_plugin
+#   protoc --dart_out=lib/ bindings/generated/dart/*.proto
+lang: dart
+proto_dir: proto/osp/v1
+out: bindings/generated/dart

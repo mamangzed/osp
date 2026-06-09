@@ -20,6 +20,7 @@ owl-transport = { workspace = true }
 owl-query = { workspace = true }
 owl-server = { workspace = true }
 owl-client = { workspace = true }
+owl-codegen = { path = "../owl-codegen" }
 tokio = { workspace = true }
 clap = { workspace = true }
 serde = { workspace = true }

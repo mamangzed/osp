@@ -1,0 +1,4 @@
+# Node.js bindings: emits .proto files + `osp.js` wrapper around protobufjs.
+lang: node
+proto_dir: proto/osp/v1
+out: bindings/generated/node

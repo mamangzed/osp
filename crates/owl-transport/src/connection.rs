@@ -1,18 +1,81 @@
 //! TCP / TLS connection wrapper that reads and writes OSP frames.
+//!
+//! The transport supports two stream kinds:
+//! - `Plain` — a raw `TcpStream` (used for the v1 default)
+//! - `Tls`   — a `TlsStream<TcpStream>` from `tokio-rustls` (used when TLS is
+//!             negotiated by the server or client)
+//!
+//! Both are unified behind a `TransportStream` enum that implements
+//! `AsyncRead` + `AsyncWrite` so the same `Connection` logic works for both.
 
 use crate::compress;
 use crate::frame::{FLAG_CHUNK, FLAG_CHUNK_LAST, FLAG_COMPRESSED, Frame, FrameError, FrameHeader, HEADER_LEN};
 use bytes::{BufMut, Bytes, BytesMut};
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+use std::io;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+use tokio_rustls::server::TlsStream;
 
-type ReadHalf = BufReader<tokio::io::ReadHalf<TcpStream>>;
-type WriteHalf = tokio::io::WriteHalf<TcpStream>;
+/// Underlying stream type carried by a `Connection`.
+pub enum TransportStream {
+    Plain(TcpStream),
+    TlsServer(TlsStream<TcpStream>),
+    TlsClient(tokio_rustls::client::TlsStream<TcpStream>),
+}
+
+impl AsyncRead for TransportStream {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        match &mut *self {
+            Self::Plain(s) => Pin::new(s).poll_read(cx, buf),
+            Self::TlsServer(s) => Pin::new(s).poll_read(cx, buf),
+            Self::TlsClient(s) => Pin::new(s).poll_read(cx, buf),
+        }
+    }
+}
+
+impl AsyncWrite for TransportStream {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        match &mut *self {
+            Self::Plain(s) => Pin::new(s).poll_write(cx, buf),
+            Self::TlsServer(s) => Pin::new(s).poll_write(cx, buf),
+            Self::TlsClient(s) => Pin::new(s).poll_write(cx, buf),
+        }
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        match &mut *self {
+            Self::Plain(s) => Pin::new(s).poll_flush(cx),
+            Self::TlsServer(s) => Pin::new(s).poll_flush(cx),
+            Self::TlsClient(s) => Pin::new(s).poll_flush(cx),
+        }
+    }
+
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        match &mut *self {
+            Self::Plain(s) => Pin::new(s).poll_shutdown(cx),
+            Self::TlsServer(s) => Pin::new(s).poll_shutdown(cx),
+            Self::TlsClient(s) => Pin::new(s).poll_shutdown(cx),
+        }
+    }
+}
+
+type ReadEnd = BufReader<ReadHalf<TransportStream>>;
+type WriteEnd = WriteHalf<TransportStream>;
 
 pub struct Connection {
-    reader: Mutex<ReadHalf>,
-    writer: Mutex<WriteHalf>,
+    reader: Mutex<ReadEnd>,
+    writer: Mutex<WriteEnd>,
     chunk_buf: Mutex<Option<ChunkState>>,
     next_chunk_id: Mutex<u32>,
 }
@@ -26,7 +89,22 @@ struct ChunkState {
 }
 
 impl Connection {
+    /// Wrap a raw TCP stream.
     pub fn new(stream: TcpStream) -> Self {
+        Self::from_transport(TransportStream::Plain(stream))
+    }
+
+    /// Wrap a server-side TLS stream.
+    pub fn new_tls(stream: TlsStream<TcpStream>) -> Self {
+        Self::from_transport(TransportStream::TlsServer(stream))
+    }
+
+    /// Wrap a client-side TLS stream.
+    pub fn new_tls_for_client(stream: tokio_rustls::client::TlsStream<TcpStream>) -> Self {
+        Self::from_transport(TransportStream::TlsClient(stream))
+    }
+
+    fn from_transport(stream: TransportStream) -> Self {
         let (r, w) = tokio::io::split(stream);
         Self {
             reader: Mutex::new(BufReader::new(r)),
@@ -225,10 +303,13 @@ pub async fn connect_tcp(addr: &str) -> Result<Connection, FrameError> {
     Ok(Connection::new(stream))
 }
 
-/// TLS configuration (placeholder for v1; full TLS wrapping ships in Stage 7).
+/// TLS configuration and connection helpers.
 pub mod tls {
     use rustls::ClientConfig;
     use std::sync::Arc;
+    use tokio::net::TcpStream;
+
+    use super::{Connection, FrameError, TlsStream};
 
     #[derive(Clone)]
     pub enum TlsConfig {
@@ -241,5 +322,41 @@ pub mod tls {
         Arc::new(ClientConfig::builder()
             .with_root_certificates(roots)
             .with_no_client_auth())
+    }
+
+    /// Server-side TLS accept: take an already-accepted TCP stream and perform
+    /// the rustls handshake. Returns a `Connection` over the resulting TLS
+    /// stream. The `server_name` in the cert is the one the client expects.
+    pub async fn accept_tls(
+        stream: TcpStream,
+        server_config: Arc<rustls::ServerConfig>,
+    ) -> Result<Connection, FrameError> {
+        let acceptor = tokio_rustls::TlsAcceptor::from(server_config);
+        let tls = acceptor.accept(stream).await.map_err(|e| {
+            FrameError::Io(std::io::Error::other(format!("tls accept: {}", e)))
+        })?;
+        Ok(Connection::new_tls(tls))
+    }
+
+    /// Client-side TLS connect: dial TCP, then perform the rustls handshake
+    /// using `server_name` for SNI + cert verification.
+    pub async fn connect_tls(
+        addr: &str,
+        client_config: Arc<ClientConfig>,
+        server_name: &str,
+    ) -> Result<Connection, FrameError> {
+        let stream = TcpStream::connect(addr).await?;
+        stream.set_nodelay(true).ok();
+        let connector = tokio_rustls::TlsConnector::from(client_config);
+        let dns_name = rustls::pki_types::ServerName::try_from(server_name.to_owned())
+            .map_err(|e| FrameError::Io(std::io::Error::other(format!("dns name: {}", e))))?;
+        let tls: tokio_rustls::client::TlsStream<TcpStream> = connector
+            .connect(dns_name, stream)
+            .await
+            .map_err(|e| FrameError::Io(std::io::Error::other(format!("tls connect: {}", e))))?;
+        // Wrap the client TlsStream in a TransportStream::Tls variant.
+        // Both client and server TlsStream implement AsyncRead+AsyncWrite,
+        // so the same Connection logic works.
+        Ok(Connection::new_tls_for_client(tls))
     }
 }

@@ -14,3 +14,7 @@ thiserror = { workspace = true }
 jsonwebtoken = "9"
 uuid = { workspace = true }
 parking_lot = { workspace = true }
+
+[dev-dependencies]
+rsa = "0.9"
+rand = "0.8"

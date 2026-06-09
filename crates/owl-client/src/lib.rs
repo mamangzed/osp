@@ -177,6 +177,18 @@ impl OwlClientBuilder {
     pub fn local_db(mut self, path: impl Into<String>) -> Self { self.cfg.local_db = Some(path.into()); self }
     pub fn heartbeat_interval(mut self, d: std::time::Duration) -> Self { self.cfg.heartbeat_interval = d; self }
     pub fn reconnect_max_attempts(mut self, n: u32) -> Self { self.cfg.reconnect_max_attempts = Some(n); self }
+    /// Override the entire TLS client config (used when the URL is `tls://`).
+    pub fn tls(mut self, tls: crate::config::TlsClientConfig) -> Self { self.cfg.tls = tls; self }
+    /// Convenience: PEM-encoded CA certificates to trust for `tls://` URLs.
+    pub fn tls_roots_pem(mut self, pem: impl Into<Vec<u8>>) -> Self {
+        self.cfg.tls.roots_pem = Some(pem.into());
+        self
+    }
+    /// Convenience: explicit server name for SNI / cert verification.
+    pub fn tls_server_name(mut self, name: impl Into<String>) -> Self {
+        self.cfg.tls.server_name = Some(name.into());
+        self
+    }
     pub fn build(self) -> ClientResult<OwlClient> {
         OwlClient::new(self.cfg)
     }

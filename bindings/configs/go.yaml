@@ -1,0 +1,8 @@
+# Go bindings: emits .proto files under bindings/generated/go/osp/v1/ + README.
+# To regenerate the Go stubs:
+#   go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+#   cd bindings/generated/go/osp/v1
+#   protoc --go_out=. --go_opt=paths=source_relative osp/v1/*.proto
+lang: go
+proto_dir: proto/osp/v1
+out: bindings/generated/go

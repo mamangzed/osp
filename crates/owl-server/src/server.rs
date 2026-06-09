@@ -3,10 +3,12 @@
 use crate::config::Config;
 use crate::connection::accept_loop;
 use crate::session::Router;
+use crate::snapshot_task;
 use anyhow::Context;
 use owl_auth::JwtValidator;
 use owl_storage::SqliteBackend;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::net::TcpListener;
 use tracing::info;
 
@@ -41,6 +43,17 @@ pub async fn run(cfg: Config) -> anyhow::Result<()> {
     let router = Arc::new(Router::new());
     let listener = TcpListener::bind(&cfg.bind).await.context("bind")?;
     info!(bind = %cfg.bind, db = %cfg.db, "owl-server listening");
+
+    // Snapshot scheduler. Period is fixed at 1 second; cadence is governed by
+    // op count (`snapshot_every`).
+    let _snap_handle = snapshot_task::spawn(
+        router.clone(),
+        records.clone(),
+        oplog.clone(),
+        snapshots.clone(),
+        cfg.snapshot_every,
+        Duration::from_secs(1),
+    );
 
     accept_loop(listener, router, records, oplog, snapshots, validator, &cfg).await
 }

@@ -1,0 +1,5 @@
+# Python bindings: emits .proto files + `osp.py` wrapper + Makefile
+# (run `make` to regenerate the *_pb2.py stubs).
+lang: python
+proto_dir: proto/osp/v1
+out: bindings/generated/python

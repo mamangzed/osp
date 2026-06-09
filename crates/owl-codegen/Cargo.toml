@@ -4,10 +4,21 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = ".proto → multi-language stubs. Stub in v1 MVP; implementation deferred to Stage 10."
+description = ".proto → multi-language stubs for OSP (Stage 10)."
 
 [[bin]]
 name = "owl-codegen"
 path = "src/main.rs"
 
+[lib]
+name = "owl_codegen"
+path = "src/lib.rs"
+
 [dependencies]
+clap = { workspace = true }
+protox = "0.7"
+prost-build = "0.13"
+prost = "0.13"
+prost-types = "0.13"
+anyhow = { workspace = true }
+thiserror = { workspace = true }

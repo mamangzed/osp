@@ -27,3 +27,13 @@ parking_lot = { workspace = true }
 chrono = { workspace = true }
 dashmap = { workspace = true }
 rand = "0.8"
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
+tokio-rustls = { workspace = true }
+webpki-roots = { version = "0.26", optional = true }
+
+[features]
+default = ["tls-webpki-roots"]
+# When on (default), Mozilla's CA bundle is bundled in. Off → users must
+# supply `TlsClientConfig::roots_pem`.
+tls-webpki-roots = ["dep:webpki-roots"]

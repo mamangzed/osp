@@ -44,6 +44,7 @@ pub enum Envelope {
     Error(ErrorMsg),
     Ping(HelloMsg),
     Pong(HelloMsg),
+    Presence(PresenceMsg),
 }
 
 impl Envelope {
@@ -67,6 +68,7 @@ impl Envelope {
             Self::Error(_) => OpCode::Error,
             Self::Ping(_) => OpCode::Ping,
             Self::Pong(_) => OpCode::Pong,
+            Self::Presence(_) => OpCode::Presence,
         }
     }
 
@@ -103,6 +105,7 @@ impl Envelope {
             Self::Error(m) => pb_frame::envelope::Payload::Error(m.clone().into()),
             Self::Ping(m) => pb_frame::envelope::Payload::Hello(m.clone().into()),
             Self::Pong(m) => pb_frame::envelope::Payload::Hello(m.clone().into()),
+            Self::Presence(m) => pb_frame::envelope::Payload::Presence(m.clone().into()),
         });
         env
     }
@@ -128,6 +131,7 @@ impl Envelope {
             pb_frame::envelope::Payload::Snapshot(m) => Self::Snapshot(m.into()),
             pb_frame::envelope::Payload::Record(m) => Self::Record(m.into()),
             pb_frame::envelope::Payload::Error(m) => Self::Error(m.into()),
+            pb_frame::envelope::Payload::Presence(m) => Self::Presence(m.into()),
         })
     }
 }
@@ -389,6 +393,13 @@ pub struct ErrorMsg {
     pub detail: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PresenceMsg {
+    pub device_id: String,
+    pub status: u32,
+    pub lamport: u64,
+}
+
 // ----- Prost conversions -----
 
 impl From<pb_common::VClock> for owl_types::VectorClock {
@@ -514,6 +525,18 @@ impl From<pb_common::ErrorInfo> for ErrorMsg {
 impl From<ErrorMsg> for pb_common::ErrorInfo {
     fn from(m: ErrorMsg) -> Self {
         Self { code: m.code, message: m.message, detail: m.detail }
+    }
+}
+
+impl From<pb_auth::Presence> for PresenceMsg {
+    fn from(pb: pb_auth::Presence) -> Self {
+        Self { device_id: pb.device_id, status: pb.status, lamport: pb.lamport }
+    }
+}
+
+impl From<PresenceMsg> for pb_auth::Presence {
+    fn from(m: PresenceMsg) -> Self {
+        Self { device_id: m.device_id, status: m.status, lamport: m.lamport }
     }
 }
 
