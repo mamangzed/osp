@@ -1,0 +1,21 @@
+[package]
+name = "owl-protocol"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "OSP protobuf messages and opcode dispatch."
+
+[dependencies]
+owl-types = { workspace = true }
+owl-transport = { workspace = true }
+prost = "0.13"
+prost-types = "0.13"
+thiserror = { workspace = true }
+bytes = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+uuid = { workspace = true }
+
+[build-dependencies]
+prost-build = "0.13"
+protox = "0.7.2"

@@ -1,0 +1,31 @@
+[package]
+name = "owl-php"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "OWL PHP extension. Built as a PHP .dll/.so that links against the PHP runtime and embeds the Rust owl-client SDK."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+owl-types = { workspace = true }
+owl-sync = { workspace = true }
+owl-storage = { workspace = true }
+owl-protocol = { workspace = true }
+owl-transport = { workspace = true }
+owl-client = { workspace = true }
+owl-query = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+libc = "0.2"
+once_cell = "1"
+async-trait = { workspace = true }
+
+[build-dependencies]
+cc = "1"

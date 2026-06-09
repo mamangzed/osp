@@ -1,0 +1,13 @@
+[package]
+name = "owl-codegen"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = ".proto → multi-language stubs. Stub in v1 MVP; implementation deferred to Stage 10."
+
+[[bin]]
+name = "owl-codegen"
+path = "src/main.rs"
+
+[dependencies]

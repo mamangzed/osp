@@ -1,0 +1,20 @@
+[package]
+name = "owl-sync"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Sync engine: op generation, merge, replay, snapshot sync for OSP."
+
+[dependencies]
+owl-types = { workspace = true }
+owl-protocol = { workspace = true }
+owl-storage = { workspace = true }
+owl-query = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+parking_lot = { workspace = true }

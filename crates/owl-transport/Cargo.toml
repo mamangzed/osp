@@ -1,0 +1,25 @@
+[package]
+name = "owl-transport"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "OSP transport: frame, TCP, TLS, heartbeat, reconnect, chunking, zstd compression."
+
+[dependencies]
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+bytes = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio-rustls = { workspace = true }
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
+zstd = { workspace = true }
+parking_lot = { workspace = true }
+uuid = { workspace = true }
+rand = "0.8"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }

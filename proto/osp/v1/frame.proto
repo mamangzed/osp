@@ -1,0 +1,40 @@
+syntax = "proto3";
+package osp.v1;
+
+import "osp/v1/common.proto";
+import "osp/v1/auth.proto";
+import "osp/v1/sync.proto";
+
+// Note: OSP frame envelope is encoded INSIDE the 22-byte header's payload
+// (post protobuf). The transport frame is a 22-byte fixed header
+// (MAGIC + VERSION + OPCODE + FLAGS + LEN + REQ_ID) followed by a
+// single Protobuf `Envelope` message. The Envelope carries a typed
+// payload via oneof so opcode can be cross-checked against payload type.
+
+message Envelope {
+  oneof payload {
+    // Auth / handshake
+    Hello hello = 1;
+    HelloAck hello_ack = 2;
+    Auth auth = 3;
+    AuthOk auth_ok = 4;
+    AuthFailed auth_failed = 5;
+
+    // Subscriptions
+    Subscribe subscribe = 6;
+    Unsubscribe unsubscribe = 7;
+    SubscribeAck subscribe_ack = 8;
+
+    // Sync
+    Operation op = 20;
+    OpAck op_ack = 21;
+    SyncPush sync_push = 22;
+    SyncPullRequest sync_pull_request = 23;
+    SyncPullResponse sync_pull_response = 24;
+    Snapshot snapshot = 25;
+    Record record = 26;
+
+    // Misc
+    ErrorInfo error = 40;
+  }
+}

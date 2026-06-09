@@ -1,0 +1,30 @@
+[package]
+name = "owl-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "OWL operator CLI: server start/status, client put/get/list, auth issue."
+
+[[bin]]
+name = "owl"
+path = "src/main.rs"
+
+[dependencies]
+owl-types = { workspace = true }
+owl-sync = { workspace = true }
+owl-storage = { workspace = true }
+owl-auth = { workspace = true }
+owl-protocol = { workspace = true }
+owl-transport = { workspace = true }
+owl-query = { workspace = true }
+owl-server = { workspace = true }
+owl-client = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+jsonwebtoken = "9"
+uuid = { workspace = true }

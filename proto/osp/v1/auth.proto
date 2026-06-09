@@ -1,0 +1,34 @@
+syntax = "proto3";
+package osp.v1;
+
+import "osp/v1/common.proto";
+
+message Hello {
+  uint32 protocol_version = 1;
+  string sdk_version = 2;
+  string device_id = 3;        // UUID v4
+  string device_platform = 4;  // "linux", "darwin", "android", "ios", "windows", "web", ...
+  repeated Capability capabilities = 5;
+}
+
+message HelloAck {
+  uint32 protocol_version = 1;
+  string server_version = 2;
+  string session_id = 3; // UUID
+  uint32 heartbeat_interval_ms = 4;
+  repeated Capability selected_capabilities = 5;
+  uint64 snapshot_window = 6; // number of recent ops server keeps in OpLogStore
+}
+
+message Auth {
+  string token = 1; // JWT or opaque API key
+}
+
+message AuthOk {
+  string device_id = 1;
+  repeated string collection_scopes = 2;
+}
+
+message AuthFailed {
+  ErrorInfo error = 1;
+}

@@ -1,0 +1,22 @@
+crates\owl-sync\src\merge.rs:3:5: warning: unused import: `crate::op::make_field_change`
+crates\owl-sync\src\merge.rs:4:67: warning: unused import: `Value`
+crates\owl-sync\src\merge.rs:5:41: warning: unused import: `Lamport`
+crates\owl-sync\src\engine.rs:197:37: warning: unused variable: `coll`: help: if this is intentional, prefix it with an underscore: `_coll`
+crates\owl-sync\src\merge.rs:38:9: warning: unused variable: `device`: help: if this is intentional, prefix it with an underscore: `_device`
+crates\owl-sync\src\engine.rs:32:5: warning: field `pending_ops` is never read
+warning: `owl-sync` (lib) generated 6 warnings (run `cargo fix --lib -p owl-sync` to apply 3 suggestions)
+   Compiling owl-client v0.1.0 (D:\Project\Rust\OSP\crates\owl-client)
+error[E0382]: borrow of moved value: `ack.subscription_id`
+  --> crates\owl-client\src\sync_task.rs:99:13
+   |
+97 |                 state.subscriptions.insert(ack.subscription_id, ack.snapshot_revision);
+   |                                            ------------------- value moved here
+98 |             }
+99 |             debug!(sub = %ack.subscription_id, accepted = ack.accepted, "subscribe ack");
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ value borrowed here after move
+   |
+   = note: move occurs because `ack.subscription_id` has type `std::string::String`, which does not implement the `Copy` trait
+   = note: this error originates in the macro `$crate::valueset_all` which comes from the expansion of the macro `debug` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+For more information about this error, try `rustc --explain E0382`.
+error: could not compile `owl-client` (lib) due to 1 previous error

@@ -1,0 +1,33 @@
+crates\owl-sync\src\merge.rs:3:5: warning: unused import: `crate::op::make_field_change`
+crates\owl-sync\src\merge.rs:4:67: warning: unused import: `Value`
+crates\owl-sync\src\merge.rs:5:41: warning: unused import: `Lamport`
+crates\owl-sync\src\engine.rs:197:37: warning: unused variable: `coll`: help: if this is intentional, prefix it with an underscore: `_coll`
+crates\owl-sync\src\merge.rs:38:9: warning: unused variable: `device`: help: if this is intentional, prefix it with an underscore: `_device`
+crates\owl-sync\src\engine.rs:32:5: warning: field `pending_ops` is never read
+warning: `owl-sync` (lib) generated 6 warnings (run `cargo fix --lib -p owl-sync` to apply 3 suggestions)
+   Compiling owl-cli v0.1.0 (D:\Project\Rust\OSP\crates\owl-cli)
+warning: unused import: `owl_auth::JwtValidator`
+ --> crates\owl-cli\src\main.rs:4:5
+  |
+4 | use owl_auth::JwtValidator;
+  |     ^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `OwlClient`
+ --> crates\owl-cli\src\main.rs:5:18
+  |
+5 | use owl_client::{OwlClient, OwlClientBuilder};
+  |                  ^^^^^^^^^
+
+error[E0277]: the trait bound `DeviceId: From<Uuid>` is not satisfied
+   --> crates\owl-cli\src\main.rs:108:55
+    |
+108 |                 Some(s) => uuid::Uuid::parse_str(&s)?.into(),
+    |                                                       ^^^^ the trait `From<Uuid>` is not implemented for `DeviceId`
+    |
+    = note: required for `Uuid` to implement `Into<DeviceId>`
+
+For more information about this error, try `rustc --explain E0277`.
+warning: `owl-cli` (bin "owl") generated 2 warnings
+error: could not compile `owl-cli` (bin "owl") due to 1 previous error; 2 warnings emitted

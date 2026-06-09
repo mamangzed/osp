@@ -1,0 +1,253 @@
+warning: unused import: `crate::op::make_field_change`
+ --> crates\owl-sync\src\merge.rs:3:5
+  |
+3 | use crate::op::make_field_change;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `Value`
+ --> crates\owl-sync\src\merge.rs:4:67
+  |
+4 | use owl_protocol::{FieldMetaMsg, OperationMsg, OpKind, RecordMsg, Value};
+  |                                                                   ^^^^^
+
+warning: unused import: `Lamport`
+ --> crates\owl-sync\src\merge.rs:5:41
+  |
+5 | use owl_types::{CollectionId, DeviceId, Lamport, RecordId, VectorClock};
+  |                                         ^^^^^^^
+
+warning: unused variable: `coll`
+   --> crates\owl-sync\src\engine.rs:197:37
+    |
+197 |     pub async fn apply_delta(&self, coll: CollectionId, ops: Vec<OperationMsg>) -> SyncResult<()> {
+    |                                     ^^^^ help: if this is intentional, prefix it with an underscore: `_coll`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `device`
+  --> crates\owl-sync\src\merge.rs:38:9
+   |
+38 |     let device = DeviceId(Uuid::parse_str(&op.device_id)?);
+   |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_device`
+
+warning: field `pending_ops` is never read
+  --> crates\owl-sync\src\engine.rs:32:5
+   |
+29 | struct LocalState {
+   |        ---------- field in this struct
+...
+32 |     pending_ops: Vec<OperationMsg>,
+   |     ^^^^^^^^^^^
+   |
+   = note: `LocalState` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `owl-sync` (lib) generated 6 warnings (run `cargo fix --lib -p owl-sync` to apply 3 suggestions)
+   Compiling owl-server v0.1.0 (D:\Project\Rust\OSP\crates\owl-server)
+error[E0432]: unresolved import `anyhow`
+ --> crates\owl-server\src\server.rs:6:5
+  |
+6 | use anyhow::Context;
+  |     ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+  |
+  = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:225:37
+    |
+225 |         let env = env.ok_or_else(|| anyhow::anyhow!("connection closed before {:?}", expected))?;
+    |                                     ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:227:24
+    |
+227 |             return Err(anyhow::anyhow!("expected {:?}, got {:?}", expected, env.opcode()));
+    |                        ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:243:24
+    |
+243 |             return Err(anyhow::anyhow!("envelope too large to send"));
+    |                        ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+  --> crates\owl-server\src\connection.rs:54:29
+   |
+54 |             _ => return Err(anyhow::anyhow!("expected AUTH")),
+   |                             ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+  --> crates\owl-server\src\connection.rs:36:29
+   |
+36 |             _ => return Err(anyhow::anyhow!("expected HELLO")),
+   |                             ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+
+warning: unused import: `HelloMsg`
+ --> crates\owl-server\src\connection.rs:6:66
+  |
+6 | use owl_protocol::{AuthOkMsg, Capability, Envelope, HelloAckMsg, HelloMsg, SubscribeMsg, UnsubscribeMsg};
+  |                                                                  ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `AsyncReadExt`
+  --> crates\owl-server\src\connection.rs:10:17
+   |
+10 | use tokio::io::{AsyncReadExt, AsyncWriteExt};
+   |                 ^^^^^^^^^^^^
+
+warning: unused import: `tokio::sync::Mutex`
+  --> crates\owl-server\src\connection.rs:12:5
+   |
+12 | use tokio::sync::Mutex;
+   |     ^^^^^^^^^^^^^^^^^^
+
+error[E0599]: no variant or associated item named `Ping` found for enum `owl_protocol::Envelope` in the current scope
+  --> crates\owl-server\src\connection.rs:95:27
+   |
+95 |                 Envelope::Ping(_) => {
+   |                           ^^^^ variant or associated item not found in `owl_protocol::Envelope`
+
+error[E0599]: no variant or associated item named `Pong` found for enum `owl_protocol::Envelope` in the current scope
+  --> crates\owl-server\src\connection.rs:96:51
+   |
+96 |                     self.write_envelope(Envelope::Pong(owl_protocol::HelloMsg {
+   |                                                   ^^^^ variant or associated item not found in `owl_protocol::Envelope`
+   |
+note: if you're trying to build a new `owl_protocol::Envelope`, consider using `owl_protocol::Envelope::decode` which returns `Result<owl_protocol::Envelope, ProtocolError>`
+  --> D:\Project\Rust\OSP\crates\owl-protocol\src\envelope.rs:76:5
+   |
+76 |     pub fn decode(opcode: OpCode, bytes: &[u8]) -> Result<Self, ProtocolError> {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0599]: no method named `context` found for enum `Result` in the current scope
+  --> crates\owl-server\src\server.rs:23:50
+   |
+23 |         Arc::new(SqliteBackend::open_in_memory().context("open in-memory sqlite")?)
+   |                                                  ^^^^^^^ method not found in `Result<SqliteBackend, StorageError>`
+
+error[E0599]: no method named `context` found for enum `Result` in the current scope
+  --> crates\owl-server\src\server.rs:25:47
+   |
+25 |         Arc::new(SqliteBackend::open(&cfg.db).context("open sqlite")?)
+   |                                               ^^^^^^^ method not found in `Result<SqliteBackend, StorageError>`
+
+error[E0599]: no method named `context` found for enum `Result` in the current scope
+  --> crates\owl-server\src\server.rs:40:55
+   |
+40 |     let listener = TcpListener::bind(&cfg.bind).await.context("bind")?;
+   |                                                       ^^^^^^^ method not found in `Result<tokio::net::TcpListener, futures_io::Error>`
+
+error[E0599]: no method named `env` found for struct `Arg` in the current scope
+ --> crates\owl-server\src\config.rs:9:49
+  |
+9 |     #[arg(long, default_value = "0.0.0.0:9420", env = "OWL_BIND")]
+  |                                                 ^^^ method not found in `Arg`
+
+error[E0599]: no method named `env` found for struct `Arg` in the current scope
+  --> crates\owl-server\src\config.rs:13:17
+   |
+13 |     #[arg(long, env = "OWL_JWT_SECRET")]
+   |                 ^^^ method not found in `Arg`
+
+error[E0599]: no method named `env` found for struct `Arg` in the current scope
+  --> crates\owl-server\src\config.rs:17:43
+   |
+17 |     #[arg(long, default_value = "owl.db", env = "OWL_DB")]
+   |                                           ^^^ method not found in `Arg`
+
+warning: unused import: `AsyncWriteExt`
+  --> crates\owl-server\src\connection.rs:10:31
+   |
+10 | use tokio::io::{AsyncReadExt, AsyncWriteExt};
+   |                               ^^^^^^^^^^^^^
+
+error[E0515]: cannot return value referencing function parameter `kv`
+  --> crates\owl-server\src\session.rs:81:28
+   |
+81 |             .flat_map(|kv| kv.value().iter().cloned())
+   |                            --^^^^^^^^^^^^^^^^^^^^^^^^
+   |                            |
+   |                            returns a value referencing data owned by the current function
+   |                            `kv` is borrowed here
+   |
+   = help: use `.collect()` to allocate the iterator
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+  --> crates\owl-server\src\connection.rs:31:35
+   |
+31 |     pub async fn run(mut self) -> anyhow::Result<()> {
+   |                                   ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+   |
+   = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:115:62
+    |
+115 |     async fn handle_subscribe(&mut self, s: SubscribeMsg) -> anyhow::Result<()> {
+    |                                                              ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+    |
+    = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:162:66
+    |
+162 |     async fn handle_unsubscribe(&mut self, u: UnsubscribeMsg) -> anyhow::Result<()> {
+    |                                                                  ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+    |
+    = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:168:70
+    |
+168 |     async fn handle_op(&mut self, op: owl_protocol::OperationMsg) -> anyhow::Result<()> {
+    |                                                                      ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+    |
+    = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:223:60
+    |
+223 |     async fn read_envelope(&mut self, expected: OpCode) -> anyhow::Result<Envelope> {
+    |                                                            ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+    |
+    = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:232:46
+    |
+232 |     async fn read_any_envelope(&mut self) -> anyhow::Result<Option<Envelope>> {
+    |                                              ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+    |
+    = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:239:58
+    |
+239 |     async fn write_envelope(&mut self, env: Envelope) -> anyhow::Result<()> {
+    |                                                          ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+    |
+    = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+   --> crates\owl-server\src\connection.rs:261:6
+    |
+261 | ) -> anyhow::Result<()> {
+    |      ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+    |
+    = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`
+  --> crates\owl-server\src\server.rs:13:34
+   |
+13 | pub async fn run(cfg: Config) -> anyhow::Result<()> {
+   |                                  ^^^^^^ use of unresolved module or unlinked crate `anyhow`
+   |
+   = help: if you wanted to use a crate named `anyhow`, use `cargo add anyhow` to add it to your `Cargo.toml`
+
+Some errors have detailed explanations: E0432, E0433, E0515, E0599.
+For more information about an error, try `rustc --explain E0432`.
+warning: `owl-server` (lib) generated 4 warnings
+error: could not compile `owl-server` (lib) due to 27 previous errors; 4 warnings emitted

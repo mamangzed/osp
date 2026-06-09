@@ -1,0 +1,32 @@
+crates\owl-sync\src\merge.rs:3:5: warning: unused import: `crate::op::make_field_change`
+crates\owl-sync\src\merge.rs:4:67: warning: unused import: `Value`
+crates\owl-sync\src\merge.rs:5:41: warning: unused import: `Lamport`
+crates\owl-sync\src\engine.rs:197:37: warning: unused variable: `coll`: help: if this is intentional, prefix it with an underscore: `_coll`
+crates\owl-sync\src\merge.rs:38:9: warning: unused variable: `device`: help: if this is intentional, prefix it with an underscore: `_device`
+crates\owl-sync\src\engine.rs:32:5: warning: field `pending_ops` is never read
+warning: `owl-sync` (lib) generated 6 warnings (run `cargo fix --lib -p owl-sync` to apply 3 suggestions)
+   Compiling owl-server v0.1.0 (D:\Project\Rust\OSP\crates\owl-server)
+error[E0308]: mismatched types
+  --> crates\owl-server\src\server.rs:28:51
+   |
+28 |     let oplog: Arc<dyn owl_storage::OpLogStore> = records.clone();
+   |                --------------------------------   ^^^^^^^^^^^^^^^ expected trait `OpLogStore`, found trait `RecordStore`
+   |                |
+   |                expected due to this
+   |
+   = note: expected struct `Arc<dyn OpLogStore>`
+              found struct `Arc<dyn RecordStore>`
+
+error[E0308]: mismatched types
+  --> crates\owl-server\src\server.rs:29:58
+   |
+29 |     let snapshots: Arc<dyn owl_storage::SnapshotStore> = records.clone();
+   |                    -----------------------------------   ^^^^^^^^^^^^^^^ expected trait `SnapshotStore`, found trait `RecordStore`
+   |                    |
+   |                    expected due to this
+   |
+   = note: expected struct `Arc<dyn SnapshotStore>`
+              found struct `Arc<dyn RecordStore>`
+
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `owl-server` (lib) due to 2 previous errors

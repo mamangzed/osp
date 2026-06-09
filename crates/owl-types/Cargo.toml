@@ -1,0 +1,12 @@
+[package]
+name = "owl-types"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Newtype IDs, vector clock, lamport timestamp for OSP."
+
+[dependencies]
+serde = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }

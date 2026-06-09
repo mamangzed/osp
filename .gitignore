@@ -1,0 +1,21 @@
+/target
+**/target
+**/*.rs.bk
+Cargo.lock.bak
+
+# Generated protobuf code
+crates/owl-protocol/src/gen/
+bindings/*/src/gen/
+bindings/*/lib/
+bindings/*/build/
+**/__pycache__/
+**/*.pyc
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# OS
+Thumbs.db

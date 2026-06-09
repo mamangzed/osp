@@ -1,0 +1,12 @@
+[package]
+name = "owl-query"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Query, predicate, and subscription filter for OSP."
+
+[dependencies]
+owl-types = { workspace = true }
+owl-protocol = { workspace = true }
+thiserror = { workspace = true }

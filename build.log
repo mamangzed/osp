@@ -1,0 +1,36 @@
+warning: unused import: `crate::op::make_field_change`
+ --> crates\owl-sync\src\merge.rs:3:5
+  |
+3 | use crate::op::make_field_change;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused variable: `coll`
+   --> crates\owl-sync\src\engine.rs:197:37
+    |
+197 |     pub async fn apply_delta(&self, coll: CollectionId, ops: Vec<OperationMsg>) -> SyncResult<()> {
+    |                                     ^^^^ help: if this is intentional, prefix it with an underscore: `_coll`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `device`
+  --> crates\owl-sync\src\merge.rs:38:9
+   |
+38 |     let device = DeviceId(Uuid::parse_str(&op.device_id)?);
+   |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_device`
+
+warning: field `pending_ops` is never read
+  --> crates\owl-sync\src\engine.rs:32:5
+   |
+29 | struct LocalState {
+   |        ---------- field in this struct
+...
+32 |     pending_ops: Vec<OperationMsg>,
+   |     ^^^^^^^^^^^
+   |
+   = note: `LocalState` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `owl-sync` (lib) generated 4 warnings (run `cargo fix --lib -p owl-sync` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.14s

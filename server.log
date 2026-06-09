@@ -1,0 +1,84 @@
+﻿cargo : warning: unused import: `crate::op::make_field_change`
+At line:1 char:94
++ ...  $env:Path; cargo build -p owl-server --message-format=short 2>&1 | O ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unused...e_field_change`:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ --> crates\owl-sync\src\merge.rs:3:5
+  |
+3 | use crate::op::make_field_change;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `Value`
+ --> crates\owl-sync\src\merge.rs:4:67
+  |
+4 | use owl_protocol::{FieldMetaMsg, OperationMsg, OpKind, RecordMsg, Value};
+  |                                                                   ^^^^^
+
+warning: unused import: `Lamport`
+ --> crates\owl-sync\src\merge.rs:5:41
+  |
+5 | use owl_types::{CollectionId, DeviceId, Lamport, RecordId, VectorClock};
+  |                                         ^^^^^^^
+
+warning: unused variable: `coll`
+   --> crates\owl-sync\src\engine.rs:197:37
+    |
+197 |     pub async fn apply_delta(&self, coll: CollectionId, ops: Vec<OperationMsg>) -> SyncResult<()> {
+    |                                     ^^^^ help: if this is intentional, prefix it with an underscore: `_coll`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `device`
+  --> crates\owl-sync\src\merge.rs:38:9
+   |
+38 |     let device = DeviceId(Uuid::parse_str(&op.device_id)?);
+   |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_device`
+
+warning: field `pending_ops` is never read
+  --> crates\owl-sync\src\engine.rs:32:5
+   |
+29 | struct LocalState {
+   |        ---------- field in this struct
+...
+32 |     pending_ops: Vec<OperationMsg>,
+   |     ^^^^^^^^^^^
+   |
+   = note: `LocalState` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `owl-sync` (lib) generated 6 warnings (run `cargo fix --lib -p owl-sync` to apply 3 suggestions)
+   Compiling owl-server v0.1.0 (D:\Project\Rust\OSP\crates\owl-server)
+crates\owl-server\src\server.rs:6:5: error[E0432]: unresolved import `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:225:37: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:227:24: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:243:24: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:54:29: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:36:29: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:6:66: warning: unused import: `HelloMsg`
+crates\owl-server\src\connection.rs:10:17: warning: unused import: `AsyncReadExt`
+crates\owl-server\src\connection.rs:12:5: warning: unused import: `tokio::sync::Mutex`
+crates\owl-server\src\connection.rs:95:27: error[E0599]: no variant or associated item named `Ping` found for enum `owl_protocol::Envelope` in the current scope: variant or associated item not found in `owl_protocol::Envelope`
+crates\owl-server\src\connection.rs:96:51: error[E0599]: no variant or associated item named `Pong` found for enum `owl_protocol::Envelope` in the current scope: variant or associated item not found in `owl_protocol::Envelope`
+crates\owl-server\src\server.rs:23:50: error[E0599]: no method named `context` found for enum `Result` in the current scope: method not found in `Result<SqliteBackend, StorageError>`
+crates\owl-server\src\server.rs:25:47: error[E0599]: no method named `context` found for enum `Result` in the current scope: method not found in `Result<SqliteBackend, StorageError>`
+crates\owl-server\src\server.rs:40:55: error[E0599]: no method named `context` found for enum `Result` in the current scope: method not found in `Result<tokio::net::TcpListener, futures_io::Error>`
+crates\owl-server\src\config.rs:9:49: error[E0599]: no method named `env` found for struct `Arg` in the current scope: method not found in `Arg`
+crates\owl-server\src\config.rs:13:17: error[E0599]: no method named `env` found for struct `Arg` in the current scope: method not found in `Arg`
+crates\owl-server\src\config.rs:17:43: error[E0599]: no method named `env` found for struct `Arg` in the current scope: method not found in `Arg`
+crates\owl-server\src\connection.rs:10:31: warning: unused import: `AsyncWriteExt`
+crates\owl-server\src\session.rs:81:28: error[E0515]: cannot return value referencing function parameter `kv`: returns a value referencing data owned by the current function
+crates\owl-server\src\connection.rs:31:35: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:115:62: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:162:66: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:168:70: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:223:60: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:232:46: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:239:58: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\connection.rs:261:6: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+crates\owl-server\src\server.rs:13:34: error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anyhow`: use of unresolved module or unlinked crate `anyhow`
+warning: `owl-server` (lib) generated 4 warnings
+error: could not compile `owl-server` (lib) due to 27 previous errors; 4 warnings emitted

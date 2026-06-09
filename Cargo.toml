@@ -1,0 +1,110 @@
+[workspace]
+resolver = "2"
+# `crates/owl-php` is a PHP extension that links against the PHP runtime
+# (php8ts.lib) and embeds the Rust owl-client SDK. It is excluded from the
+# default workspace because building it requires PHP development headers
+# (`php.h`, `zend.h`, etc.) and a PHP import library. To build the
+# extension, install PHP dev headers (e.g. `apt install php-dev` on
+# Debian/Ubuntu or a full PHP source build on Windows) and run:
+#   cargo build -p owl-php
+# See `crates/owl-php/README.md` for full build instructions.
+default-members = [
+    "crates/owl-types",
+    "crates/owl-transport",
+    "crates/owl-protocol",
+    "crates/owl-storage",
+    "crates/owl-query",
+    "crates/owl-sync",
+    "crates/owl-auth",
+    "crates/owl-server",
+    "crates/owl-client",
+    "crates/owl-codegen",
+    "crates/owl-cli",
+]
+members = [
+    "crates/owl-types",
+    "crates/owl-transport",
+    "crates/owl-protocol",
+    "crates/owl-storage",
+    "crates/owl-query",
+    "crates/owl-sync",
+    "crates/owl-auth",
+    "crates/owl-server",
+    "crates/owl-client",
+    "crates/owl-codegen",
+    "crates/owl-cli",
+    "crates/owl-php",
+]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/owl/owl"
+version = "0.1.0"
+
+[workspace.dependencies]
+# Internal
+owl-types = { path = "crates/owl-types", version = "0.1.0" }
+owl-transport = { path = "crates/owl-transport", version = "0.1.0" }
+owl-protocol = { path = "crates/owl-protocol", version = "0.1.0" }
+owl-storage = { path = "crates/owl-storage", version = "0.1.0" }
+owl-query = { path = "crates/owl-query", version = "0.1.0" }
+owl-sync = { path = "crates/owl-sync", version = "0.1.0" }
+owl-auth = { path = "crates/owl-auth", version = "0.1.0" }
+owl-server = { path = "crates/owl-server", version = "0.1.0" }
+owl-client = { path = "crates/owl-client", version = "0.1.0" }
+
+# External — async/runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+bytes = "1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+prost = "0.12"
+prost-build = "0.12"
+
+# Storage
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "uuid", "chrono"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# UUID (v7 not in std; v4 covers most needs, use uuid crate for v7)
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Errors
+thiserror = "1"
+anyhow = "1"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# TLS
+tokio-rustls = "0.25"
+rustls = "0.22"
+rustls-pemfile = "2"
+
+# Compression
+zstd = "0.13"
+
+# Misc
+parking_lot = "0.12"
+dashmap = "6"
+parking_lot_mutex = "0.2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+
+[profile.dev]
+debug = 1

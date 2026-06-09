@@ -1,0 +1,29 @@
+[package]
+name = "owl-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "OSP high-level Rust client SDK."
+
+[dependencies]
+owl-types = { workspace = true }
+owl-sync = { workspace = true }
+owl-storage = { workspace = true }
+owl-auth = { workspace = true }
+owl-protocol = { workspace = true }
+owl-transport = { workspace = true }
+owl-query = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+bytes = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+parking_lot = { workspace = true }
+chrono = { workspace = true }
+dashmap = { workspace = true }
+rand = "0.8"
