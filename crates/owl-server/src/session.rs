@@ -81,6 +81,25 @@ impl Router {
     pub fn unsubscribe(&self, sub_id: &str, session_id: uuid::Uuid) {
         if let Some(mut v) = self.subs.get_mut(sub_id) {
             v.retain(|s| s.id != session_id);
+            // Remove empty subscription lists to prevent memory leak
+            if v.is_empty() {
+                drop(v);
+                self.subs.remove(sub_id);
+            }
+        }
+
+        // Also clean up coll_subs - find collection by subscription_id
+        // and remove session from it
+        for mut entry in self.coll_subs.iter_mut() {
+            entry.value_mut().retain(|s| s.id != session_id);
+        }
+        // Remove empty collection subscription lists
+        let empty_colls: Vec<_> = self.coll_subs.iter()
+            .filter(|e| e.value().is_empty())
+            .map(|e| e.key().clone())
+            .collect();
+        for coll in empty_colls {
+            self.coll_subs.remove(&coll);
         }
         // Note: we don't remove the collection from `collections` even if the
         // last subscriber leaves. The snapshot task will skip empty collections

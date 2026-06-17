@@ -1,8 +1,7 @@
 //! Apply operations to local state. Field-level LWW with permanent tombstone.
 
-use crate::op::make_field_change;
-use owl_protocol::{FieldMetaMsg, OperationMsg, OpKind, RecordMsg, Value};
-use owl_types::{CollectionId, DeviceId, Lamport, RecordId, VectorClock};
+use owl_protocol::{FieldMetaMsg, OperationMsg, OpKind, RecordMsg};
+use owl_types::{CollectionId, DeviceId, RecordId, VectorClock};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
@@ -35,7 +34,7 @@ pub enum MergeOutcome {
 ///   - Delete: NoOp (already deleted)
 ///   - Restore: clear tombstone
 pub fn apply_op(current: Option<&RecordMsg>, op: &OperationMsg) -> MergeResult<(Option<RecordMsg>, MergeOutcome)> {
-    let device = DeviceId(Uuid::parse_str(&op.device_id)?);
+    let _device = DeviceId(Uuid::parse_str(&op.device_id)?);
     let coll = CollectionId::new(op.collection.clone());
     let rid = RecordId::new(op.record_id.clone());
 
@@ -158,7 +157,9 @@ fn clock_from_op(op: &OperationMsg) -> VectorClock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use owl_types::DeviceId;
+    use crate::op::make_field_change;
+    use owl_protocol::Value;
+    use owl_types::{DeviceId, Lamport};
 
     fn dev() -> DeviceId {
         DeviceId::new()

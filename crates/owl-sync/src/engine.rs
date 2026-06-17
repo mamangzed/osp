@@ -29,6 +29,7 @@ pub type SyncResult<T> = Result<T, SyncError>;
 struct LocalState {
     last_recv_lamport: Lamport,
     vector_clock: VectorClock,
+    #[allow(dead_code)]
     pending_ops: Vec<OperationMsg>,
 }
 
@@ -194,7 +195,7 @@ impl SyncEngine {
     }
 
     /// Pull and apply a delta (op log since lamport).
-    pub async fn apply_delta(&self, coll: CollectionId, ops: Vec<OperationMsg>) -> SyncResult<()> {
+    pub async fn apply_delta(&self, _coll: CollectionId, ops: Vec<OperationMsg>) -> SyncResult<()> {
         for op in ops {
             self.apply_remote(op).await?;
         }

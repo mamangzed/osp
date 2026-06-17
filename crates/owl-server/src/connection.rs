@@ -412,14 +412,15 @@ pub async fn accept_loop(
         let (stream, addr) = listener.accept().await?;
         stream.set_nodelay(true).ok();
         let conn = Connection::new(stream);
+        let device_id = owl_types::DeviceId::new();
         let (session, rx) = Session::new(
             uuid::Uuid::new_v4(),
-            owl_types::DeviceId::new(),
+            device_id,
             owl_auth::Claims {
-                device_id: owl_types::DeviceId::new(),
-                exp: 0,
+                device_id,
+                exp: i64::MAX,
                 iat: 0,
-                collection_scopes: vec![],
+                collection_scopes: vec!["*".into()],
                 user_id: None,
             },
         );

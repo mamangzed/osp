@@ -1,3 +1,4 @@
+# Rust
 /target
 **/target
 **/*.rs.bk
@@ -11,11 +12,84 @@ bindings/*/build/
 **/__pycache__/
 **/*.pyc
 
+# Node.js
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+**/dist/
+
+# PHP
+vendor/
+**/vendor/
+composer.lock
+.phpunit.result.cache
+.phpunit.cache/
+
+# Flutter/Dart
+.dart_tool/
+**/.dart_tool/
+.packages
+**/.packages
+build/
+**/build/
+*.g.dart
+*.freezed.dart
+
+# Claude AI
+.claude/
+.claude/**
+
 # IDE
 .idea/
 .vscode/
 *.swp
+*.swo
+*~
 .DS_Store
+*.iml
 
 # OS
 Thumbs.db
+.DS_Store
+ehthumbs.db
+Desktop.ini
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+*.a
+*.lib
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+**/coverage/
+*.lcov
+.nyc_output/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+**/tmp/
+**/temp/

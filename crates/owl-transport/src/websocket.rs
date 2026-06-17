@@ -32,15 +32,14 @@ mod ws_impl {
 
     /// Bridge between WebSocket stream and duplex stream.
     async fn bridge_ws_to_duplex(
-        mut ws: tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
-        mut duplex: tokio::io::DuplexStream,
+        ws: tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
+        duplex: tokio::io::DuplexStream,
     ) {
         let (mut ws_sink, mut ws_stream) = ws.split();
         let (mut duplex_reader, mut duplex_writer) = tokio::io::split(duplex);
 
         // WebSocket -> Duplex (read from WS, write to duplex)
         let ws_to_duplex = tokio::spawn(async move {
-            let mut buf = vec![0u8; 65536];
             loop {
                 tokio::select! {
                     // Read from WebSocket

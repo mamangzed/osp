@@ -1,0 +1,17 @@
+name: owl_osp_sdk
+description: Flutter/Dart SDK for OSP (Owl Sync Protocol) - Real-time sync engine
+version: 0.1.0
+homepage: https://github.com/owl/owl
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  uuid: ^4.0.0
+  collection: ^1.17.0
+  protobuf: ^3.1.0
+  fixnum: ^1.1.0
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0

@@ -1,0 +1,27 @@
+{
+  "name": "owl/osp-sdk",
+  "description": "PHP SDK for OSP (Owl Sync Protocol)",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "OWL\\OSP\\": "src/"
+    }
+  },
+  "scripts": {
+    "generate-proto": "php scripts/generate-proto.php",
+    "post-install-cmd": "@generate-proto",
+    "post-update-cmd": "@generate-proto"
+  },
+  "require": {
+    "php": ">=8.1",
+    "ramsey/uuid": "^4.7",
+    "ext-sockets": "*",
+    "google/protobuf": "^3.25",
+    "grpc/grpc": "^1.57"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.0",
+    "grpc/grpc-stubs": "^1.57"
+  }
+}

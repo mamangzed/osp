@@ -225,22 +225,26 @@ impl Connection {
 
     async fn read_header(&self) -> Result<Option<FrameHeader>, FrameError> {
         let mut header_buf = BytesMut::zeroed(HEADER_LEN);
-        let n = self.reader.lock().await.read(&mut header_buf).await?;
-        if n == 0 {
-            return Ok(None);
+        let mut reader = self.reader.lock().await;
+
+        // Try to read first byte to check for EOF
+        let mut first_byte = [0u8; 1];
+        match reader.read(&mut first_byte).await? {
+            0 => return Ok(None), // EOF
+            _ => header_buf[0] = first_byte[0],
         }
-        if n < HEADER_LEN {
-            let mut filled = BytesMut::from(&header_buf[..n]);
-            while filled.len() < HEADER_LEN {
-                let mut extra = [0u8; HEADER_LEN];
-                let m = self.reader.lock().await.read(&mut extra).await?;
-                if m == 0 {
-                    return Err(FrameError::Incomplete);
+
+        // Read remaining header bytes
+        if HEADER_LEN > 1 {
+            reader.read_exact(&mut header_buf[1..]).await.map_err(|e| {
+                if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                    FrameError::Incomplete
+                } else {
+                    FrameError::Io(e)
                 }
-                filled.extend_from_slice(&extra[..m]);
-            }
-            header_buf = filled;
+            })?;
         }
+
         Ok(Some(FrameHeader::decode(header_buf.freeze())?))
     }
 
@@ -272,17 +276,14 @@ impl Connection {
             id
         };
         let max = crate::frame::MAX_PAYLOAD_LEN as usize;
-        let mut first = true;
         while !payload.is_empty() {
             let take = payload.len().min(max);
             let body = payload.split_to(take);
             let mut chunk_payload = BytesMut::with_capacity(4 + body.len());
             chunk_payload.put_u32(chunk_id);
             chunk_payload.extend_from_slice(&body);
-            let mut flags = header.flags & !FLAG_CHUNK_LAST;
-            if first {
-                flags |= FLAG_CHUNK;
-            }
+            // FLAG_CHUNK is set on ALL chunks; FLAG_CHUNK_LAST is additional on the final chunk
+            let mut flags = header.flags | FLAG_CHUNK;
             if payload.is_empty() {
                 flags |= FLAG_CHUNK_LAST;
             }
@@ -297,7 +298,6 @@ impl Connection {
             .encode(&mut out);
             out.extend_from_slice(&chunk_payload);
             self.writer.lock().await.write_all(&out).await?;
-            first = false;
         }
         Ok(())
     }
@@ -320,7 +320,7 @@ pub mod tls {
     use std::sync::Arc;
     use tokio::net::TcpStream;
 
-    use super::{Connection, FrameError, TlsStream};
+    use super::{Connection, FrameError};
 
     #[derive(Clone)]
     pub enum TlsConfig {

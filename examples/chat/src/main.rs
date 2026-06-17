@@ -10,7 +10,7 @@
 //! The example spins up two clients (alice, bob) on different device IDs
 //! and has alice post a few messages; bob sees them via the sync loop.
 
-use owl_client::{OwlClient, OwlClientBuilder};
+use owl_client::OwlClientBuilder;
 use owl_protocol::Value;
 use std::time::Duration;
 
