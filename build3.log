@@ -1,0 +1,66 @@
+warning: unused import: `TlsStream`
+   --> crates/owl-transport/src/connection.rs:312:41
+    |
+312 |     use super::{Connection, FrameError, TlsStream};
+    |                                         ^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `owl-transport` (lib) generated 1 warning (run `cargo fix --lib -p owl-transport` to apply 1 suggestion)
+warning: unused import: `crate::op::make_field_change`
+ --> crates/owl-sync/src/merge.rs:3:5
+  |
+3 | use crate::op::make_field_change;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Value`
+ --> crates/owl-sync/src/merge.rs:4:67
+  |
+4 | use owl_protocol::{FieldMetaMsg, OperationMsg, OpKind, RecordMsg, Value};
+  |                                                                   ^^^^^
+
+warning: unused import: `Lamport`
+ --> crates/owl-sync/src/merge.rs:5:41
+  |
+5 | use owl_types::{CollectionId, DeviceId, Lamport, RecordId, VectorClock};
+  |                                         ^^^^^^^
+
+warning: unused variable: `coll`
+   --> crates/owl-sync/src/engine.rs:197:37
+    |
+197 |     pub async fn apply_delta(&self, coll: CollectionId, ops: Vec<OperationMsg>) -> SyncResult<()> {
+    |                                     ^^^^ help: if this is intentional, prefix it with an underscore: `_coll`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `device`
+  --> crates/owl-sync/src/merge.rs:38:9
+   |
+38 |     let device = DeviceId(Uuid::parse_str(&op.device_id)?);
+   |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_device`
+
+warning: field `pending_ops` is never read
+  --> crates/owl-sync/src/engine.rs:32:5
+   |
+29 | struct LocalState {
+   |        ---------- field in this struct
+...
+32 |     pending_ops: Vec<OperationMsg>,
+   |     ^^^^^^^^^^^
+   |
+   = note: `LocalState` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `owl-sync` (lib) generated 6 warnings (run `cargo fix --lib -p owl-sync` to apply 5 suggestions)
+warning: unused import: `OwlClient`
+  --> examples/chat/src/main.rs:13:18
+   |
+13 | use owl_client::{OwlClient, OwlClientBuilder};
+   |                  ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `examples-chat` (bin "examples-chat") generated 1 warning (run `cargo fix --bin "examples-chat" -p examples-chat` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.19s

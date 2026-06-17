@@ -4,6 +4,16 @@ OWL is a real-time, offline-first sync engine for multi-device, multi-platform a
 
 **OSP** is the binary wire protocol OWL speaks, layered directly on TCP/TLS.
 
+## WebSocket Support
+
+OSP is **transport-agnostic**. The same protocol works over TCP, WebSocket, and future transports (QUIC, Unix sockets).
+
+- **Node.js SDK**: Native WebSocket support (`@owl/osp`)
+- **Browser SDK**: WebSocket-only client (`@owl/osp-browser`)
+- **Rust OSP Server**: Use WebSocket bridge or Node.js bridge (see [docs/WEBSOCKET.md](docs/WEBSOCKET.md))
+
+See [WEBSOCKET.md](WEBSOCKET.md) for implementation details and deployment options.
+
 ## Highlights
 
 - **Realtime + offline-first** — local mutations are durable and replay on reconnect
@@ -163,8 +173,13 @@ Replay, Compression, Chunking, Capability Negotiation.
 
 ## v1 Scope (out — explicitly deferred)
 
-✗ CRDT (Text/Lists), WebSocket Gateway, QUIC, Clustering, Multi-region,
+✗ CRDT (Text/Lists), QUIC, Clustering, Multi-region,
 Automatic Resurrection, Per-field vector clock.
+
+> **Note:** WebSocket Gateway is now implemented via:
+> - Node.js SDK (`@owl/osp`) with native WebSocket support
+> - Browser SDK (`@owl/osp-browser`) for web clients
+> - Rust WebSocket bridge (`bridge/`) for Rust OSP servers
 
 ## Tests
 
@@ -173,12 +188,19 @@ cargo test
 # 67 passed, 0 failed
 ```
 
-## Roadmap (next session)
+## Roadmap
 
-- `owl-codegen`: produce Dart / Node.js / Python / PHP stubs from `proto/`
-- `examples/chat`, `examples/todo`, `examples/multi-device`
-- TLS full wiring in transport (server-side rustls)
-- WebSocket gateway (for browser clients)
-- Cross-language end-to-end demo (Rust server + PHP client + Dart client)
+### Completed
+- [x] Node.js SDK with TCP + WebSocket support (`bindings/nodejs/`)
+- [x] Browser SDK with WebSocket support (`bindings/nodejs-browser/`)
+- [x] Rust WebSocket bridge (`bridge/`)
+- [x] Documentation for WebSocket deployment (`docs/WEBSOCKET.md`)
+
+### Next (v1.1)
+- [ ] `owl-codegen`: produce Dart / Node.js / Python / PHP stubs from `proto/`
+- [ ] `examples/chat`, `examples/todo`, `examples/multi-device`
+- [ ] TLS full wiring in transport (server-side rustls)
+- [ ] Native WebSocket support in Rust `owl-server`
+- [ ] Cross-language end-to-end demo (Rust server + Browser client + PHP client)
 
 See `docs/superpowers/specs/2026-06-09-osp-v1-design.md` for the full design.

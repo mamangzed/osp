@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSP Browser Demo</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 20px auto; }
+    button { margin: 5px; padding: 8px 16px; }
+    input { padding: 6px; margin: 5px; }
+    #log { background: #f5f5f5; padding: 10px; height: 300px; overflow-y: auto; }
+    .log-entry { margin: 3px 0; font-family: monospace; }
+    .sent { color: #0066cc; }
+    .recv { color: #009900; }
+    .error { color: #cc0000; }
+  </style>
+</head>
+<body>
+  <h1>🦉 OSP Browser Client Demo</h1>
+
+  <div>
+    <input id="wsUrl" value="ws://127.0.0.1:8081" placeholder="WebSocket URL">
+    <input id="token" value="demo-token" placeholder="Token">
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()" id="disconnectBtn" disabled>Disconnect</button>
+  </div>
+
+  <div id="status" style="margin: 10px 0; padding: 10px; background: #fee; color: #900;">
+    Disconnected
+  </div>
+
+  <div>
+    <input id="collection" value="todos" placeholder="Collection">
+    <input id="recordId" value="todo-1" placeholder="Record ID">
+    <input id="field" value="title" placeholder="Field">
+    <input id="value" value="Buy milk" placeholder="Value">
+    <button onclick="setField()" id="setBtn" disabled>Set Field</button>
+    <button onclick="getRecord()" id="getBtn" disabled>Get Record</button>
+    <button onclick="deleteRecord()" id="deleteBtn" disabled>Delete</button>
+    <button onclick="subscribe()" id="subBtn" disabled>Subscribe</button>
+  </div>
+
+  <h3>Log</h3>
+  <div id="log"></div>
+
+  <script type="module">
+    import { OwlClient } from './src/client.js';
+
+    let client = null;
+
+    window.connect = async () => {
+      const url = document.getElementById('wsUrl').value;
+      const token = document.getElementById('token').value;
+
+      addLog(`Connecting to ${url}...`, 'sent');
+
+      try {
+        client = new OwlClient({
+          url,
+          token,
+          deviceId: 'browser-' + Math.random().toString(36).substr(2, 9)
+        });
+
+        await client.connect();
+
+        document.getElementById('status').style.background = '#efe';
+        document.getElementById('status').style.color = '#090';
+        document.getElementById('status').textContent = 'Connected';
+
+        document.getElementById('disconnectBtn').disabled = false;
+        document.getElementById('setBtn').disabled = false;
+        document.getElementById('getBtn').disabled = false;
+        document.getElementById('deleteBtn').disabled = false;
+        document.getElementById('subBtn').disabled = false;
+
+        client.onOpReceived = (op) => {
+          addLog(`Received op: ${op.op_id} - ${op.operation}`, 'recv');
+        };
+
+        client.onDisconnected = () => {
+          addLog('Disconnected', 'error');
+          setDisconnected();
+        };
+
+        addLog('Connected successfully', 'recv');
+      } catch (err) {
+        addLog(`Connection failed: ${err.message}`, 'error');
+      }
+    };
+
+    window.disconnect = () => {
+      if (client) {
+        client.disconnect();
+        client = null;
+        setDisconnected();
+        addLog('Disconnected', 'sent');
+      }
+    };
+
+    window.setField = async () => {
+      const collection = document.getElementById('collection').value;
+      const recordId = document.getElementById('recordId').value;
+      const field = document.getElementById('field').value;
+      const value = document.getElementById('value').value;
+
+      addLog(`Setting ${collection}.${recordId}.${field} = ${value}`, 'sent');
+
+      try {
+        await client.set(collection, recordId, field, value);
+        addLog('Set operation sent', 'sent');
+      } catch (err) {
+        addLog(`Set failed: ${err.message}`, 'error');
+      }
+    };
+
+    window.getRecord = () => {
+      const collection = document.getElementById('collection').value;
+      const recordId = document.getElementById('recordId').value;
+
+      const record = client.get(collection, recordId);
+      if (record) {
+        addLog(`Record: ${JSON.stringify(record, null, 2)}`, 'recv');
+      } else {
+        addLog('Record not found', 'error');
+      }
+    };
+
+    window.deleteRecord = async () => {
+      const collection = document.getElementById('collection').value;
+      const recordId = document.getElementById('recordId').value;
+
+      addLog(`Deleting ${collection}.${recordId}`, 'sent');
+
+      try {
+        await client.delete(collection, recordId);
+        addLog('Delete operation sent', 'sent');
+      } catch (err) {
+        addLog(`Delete failed: ${err.message}`, 'error');
+      }
+    };
+
+    window.subscribe = async () => {
+      const collection = document.getElementById('collection').value;
+
+      addLog(`Subscribing to ${collection}`, 'sent');
+
+      try {
+        await client.subscribe(collection);
+        addLog('Subscribed successfully', 'recv');
+      } catch (err) {
+        addLog(`Subscribe failed: ${err.message}`, 'error');
+      }
+    };
+
+    function setDisconnected() {
+      document.getElementById('status').style.background = '#fee';
+      document.getElementById('status').style.color = '#900';
+      document.getElementById('status').textContent = 'Disconnected';
+
+      document.getElementById('disconnectBtn').disabled = true;
+      document.getElementById('setBtn').disabled = true;
+      document.getElementById('getBtn').disabled = true;
+      document.getElementById('deleteBtn').disabled = true;
+      document.getElementById('subBtn').disabled = true;
+    }
+
+    function addLog(msg, type) {
+      const log = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+  </script>
+</body>
+</html>

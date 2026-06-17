@@ -1,0 +1,20 @@
+{
+  "name": "@owl/osp-browser",
+  "version": "0.1.0",
+  "description": "OWL Sync Protocol (OSP) - Browser SDK (WebSocket)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo 'Browser tests require a running server'"
+  },
+  "keywords": ["sync", "realtime", "offline-first", "websocket", "browser"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

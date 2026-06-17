@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSP Browser Client Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    h1 { color: #333; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .connected { background: #d4edda; color: #155724; }
+    .disconnected { background: #f8d7da; color: #721c24; }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    #log {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry { margin: 5px 0; }
+    .log-send { color: #0066cc; }
+    .log-recv { color: #009900; }
+    .log-error { color: #cc0000; }
+    input {
+      padding: 8px;
+      margin: 5px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🦉 OSP Browser Client</h1>
+
+  <div>
+    <input id="serverUrl" type="text" value="ws://127.0.0.1:8081" placeholder="WebSocket URL" />
+    <input id="token" type="text" value="demo-token" placeholder="Auth Token" />
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+  </div>
+
+  <div id="status" class="status disconnected">Disconnected</div>
+
+  <div>
+    <input id="collection" type="text" value="todos" placeholder="Collection" />
+    <input id="recordId" type="text" value="todo-1" placeholder="Record ID" />
+    <input id="field" type="text" value="title" placeholder="Field" />
+    <input id="value" type="text" value="Buy milk" placeholder="Value" />
+    <button id="setBtn" disabled>Set Field</button>
+  </div>
+
+  <div>
+    <button id="deleteBtn" disabled>Delete Record</button>
+    <button id="getBtn" disabled>Get Record</button>
+    <button id="subscribeBtn" disabled>Subscribe</button>
+  </div>
+
+  <h3>Log</h3>
+  <div id="log"></div>
+
+  <script type="module">
+    import { OwlClient } from '../nodejs-browser/src/client.js';
+
+    let client = null;
+    const log = document.getElementById('log');
+    const status = document.getElementById('status');
+
+    function addLog(msg, type = '') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function setConnected(connected) {
+      status.className = `status ${connected ? 'connected' : 'disconnected'}`;
+      status.textContent = connected ? 'Connected' : 'Disconnected';
+
+      document.getElementById('connectBtn').disabled = connected;
+      document.getElementById('disconnectBtn').disabled = !connected;
+      document.getElementById('setBtn').disabled = !connected;
+      document.getElementById('deleteBtn').disabled = !connected;
+      document.getElementById('getBtn').disabled = !connected;
+      document.getElementById('subscribeBtn').disabled = !connected;
+    }
+
+    document.getElementById('connectBtn').onclick = async () => {
+      const url = document.getElementById('serverUrl').value;
+      const token = document.getElementById('token').value;
+
+      addLog(`Connecting to ${url}...`);
+
+      try {
+        client = new OwlClient({
+          url,
+          token,
+          deviceId: 'browser-' + Math.random().toString(36).substring(7)
+        });
+
+        await client.connect();
+        addLog('Connected successfully', 'log-recv');
+        setConnected(true);
+
+        // Listen for operations
+        client.onOpReceived = (op) => {
+          addLog(`Received op: ${op.op_id} - ${op.operation}`, 'log-recv');
+        };
+
+        client.onDisconnected = () => {
+          addLog('Disconnected from server', 'log-error');
+          setConnected(false);
+        };
+      } catch (err) {
+        addLog(`Connection failed: ${err.message}`, 'log-error');
+      }
+    };
+
+    document.getElementById('disconnectBtn').onclick = () => {
+      if (client) {
+        client.disconnect();
+        client = null;
+        setConnected(false);
+        addLog('Disconnected');
+      }
+    };
+
+    document.getElementById('setBtn').onclick = async () => {
+      const collection = document.getElementById('collection').value;
+      const recordId = document.getElementById('recordId').value;
+      const field = document.getElementById('field').value;
+      const value = document.getElementById('value').value;
+
+      addLog(`Setting ${collection}.${recordId}.${field} = ${value}`, 'log-send');
+
+      try {
+        await client.set(collection, recordId, field, value);
+        addLog('Set operation sent', 'log-send');
+      } catch (err) {
+        addLog(`Set failed: ${err.message}`, 'log-error');
+      }
+    };
+
+    document.getElementById('deleteBtn').onclick = async () => {
+      const collection = document.getElementById('collection').value;
+      const recordId = document.getElementById('recordId').value;
+
+      addLog(`Deleting ${collection}.${recordId}`, 'log-send');
+
+      try {
+        await client.delete(collection, recordId);
+        addLog('Delete operation sent', 'log-send');
+      } catch (err) {
+        addLog(`Delete failed: ${err.message}`, 'log-error');
+      }
+    };
+
+    document.getElementById('getBtn').onclick = () => {
+      const collection = document.getElementById('collection').value;
+      const recordId = document.getElementById('recordId').value;
+
+      const record = client.get(collection, recordId);
+      if (record) {
+        addLog(`Get: ${JSON.stringify(record, null, 2)}`, 'log-recv');
+      } else {
+        addLog(`Get: Record not found`, 'log-error');
+      }
+    };
+
+    document.getElementById('subscribeBtn').onclick = async () => {
+      const collection = document.getElementById('collection').value;
+
+      addLog(`Subscribing to ${collection}...`, 'log-send');
+
+      try {
+        await client.subscribe(collection);
+        addLog('Subscribed successfully', 'log-recv');
+      } catch (err) {
+        addLog(`Subscribe failed: ${err.message}`, 'log-error');
+      }
+    };
+  </script>
+</body>
+</html>
