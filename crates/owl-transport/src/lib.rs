@@ -14,6 +14,9 @@ pub mod heartbeat;
 pub mod opcode;
 pub mod reconnect;
 
+#[cfg(feature = "websocket")]
+pub mod websocket;
+
 pub use connection::Connection;
 pub use frame::{Frame, FrameError, FrameHeader, FLAG_CHUNK, FLAG_CHUNK_LAST, FLAG_COMPRESSED, HEADER_LEN, MAGIC, MAX_PAYLOAD_LEN, PROTOCOL_VERSION};
 pub use opcode::OpCode;
@@ -23,6 +26,9 @@ pub use reconnect::ReconnectStrategy;
 
 pub use connection::connect_tcp;
 pub use connection::tls::{accept_tls, client_with_roots, connect_tls, TlsConfig};
+
+#[cfg(feature = "websocket")]
+pub use websocket::accept_websocket;
 
 /// Re-export the `tls` submodule so callers can refer to it as
 /// `owl_transport::tls::connect_tls` etc.

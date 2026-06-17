@@ -9,6 +9,10 @@ pub struct Config {
     #[arg(long, default_value = "0.0.0.0:9420", env = "OWL_BIND")]
     pub bind: String,
 
+    /// WebSocket bind address (host:port). If set, server also listens on WebSocket.
+    #[arg(long, env = "OWL_WS_BIND")]
+    pub ws_bind: Option<String>,
+
     /// JWT shared secret (HS256). Required if you want JWT auth.
     #[arg(long, env = "OWL_JWT_SECRET")]
     pub jwt_secret: Option<String>,

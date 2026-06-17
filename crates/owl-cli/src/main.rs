@@ -120,6 +120,7 @@ async fn main() -> anyhow::Result<()> {
                 bind,
                 db,
                 jwt_secret,
+                ws_bind: None,
                 heartbeat_ms: 15000,
                 snapshot_every: 1000,
                 max_connections: 1024,

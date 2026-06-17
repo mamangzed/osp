@@ -109,7 +109,11 @@ cargo build
 cargo test
 
 # Run the server (in-memory SQLite, dev-mode auth accepts any non-empty token)
+# TCP only:
 cargo run -p owl-server -- --bind 0.0.0.0:9420 --db :memory:
+
+# TCP + WebSocket (browser clients connect to ws://0.0.0.0:9421):
+cargo run -p owl-server -- --bind 0.0.0.0:9420 --ws-bind 0.0.0.0:9421 --db :memory:
 
 # Issue a JWT (for a real deployment)
 TOKEN=$(cargo run -p owl-cli -- issue-token --secret "my-secret" --scopes "users,orders")

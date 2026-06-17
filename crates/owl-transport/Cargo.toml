@@ -21,6 +21,14 @@ parking_lot = { workspace = true }
 uuid = { workspace = true }
 rand = "0.8"
 
+# Optional WebSocket support
+tokio-tungstenite = { workspace = true, optional = true }
+futures-util = { workspace = true, optional = true }
+
+[features]
+default = []
+websocket = ["dep:tokio-tungstenite", "dep:futures-util"]
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }
 rcgen = "0.13"

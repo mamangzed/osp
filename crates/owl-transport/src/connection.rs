@@ -24,6 +24,8 @@ pub enum TransportStream {
     Plain(TcpStream),
     TlsServer(TlsStream<TcpStream>),
     TlsClient(tokio_rustls::client::TlsStream<TcpStream>),
+    /// Duplex stream — used for WebSocket bridging and testing.
+    Duplex(tokio::io::DuplexStream),
 }
 
 impl AsyncRead for TransportStream {
@@ -36,6 +38,7 @@ impl AsyncRead for TransportStream {
             Self::Plain(s) => Pin::new(s).poll_read(cx, buf),
             Self::TlsServer(s) => Pin::new(s).poll_read(cx, buf),
             Self::TlsClient(s) => Pin::new(s).poll_read(cx, buf),
+            Self::Duplex(s) => Pin::new(s).poll_read(cx, buf),
         }
     }
 }
@@ -50,6 +53,7 @@ impl AsyncWrite for TransportStream {
             Self::Plain(s) => Pin::new(s).poll_write(cx, buf),
             Self::TlsServer(s) => Pin::new(s).poll_write(cx, buf),
             Self::TlsClient(s) => Pin::new(s).poll_write(cx, buf),
+            Self::Duplex(s) => Pin::new(s).poll_write(cx, buf),
         }
     }
 
@@ -58,6 +62,7 @@ impl AsyncWrite for TransportStream {
             Self::Plain(s) => Pin::new(s).poll_flush(cx),
             Self::TlsServer(s) => Pin::new(s).poll_flush(cx),
             Self::TlsClient(s) => Pin::new(s).poll_flush(cx),
+            Self::Duplex(s) => Pin::new(s).poll_flush(cx),
         }
     }
 
@@ -66,6 +71,7 @@ impl AsyncWrite for TransportStream {
             Self::Plain(s) => Pin::new(s).poll_shutdown(cx),
             Self::TlsServer(s) => Pin::new(s).poll_shutdown(cx),
             Self::TlsClient(s) => Pin::new(s).poll_shutdown(cx),
+            Self::Duplex(s) => Pin::new(s).poll_shutdown(cx),
         }
     }
 }
@@ -102,6 +108,11 @@ impl Connection {
     /// Wrap a client-side TLS stream.
     pub fn new_tls_for_client(stream: tokio_rustls::client::TlsStream<TcpStream>) -> Self {
         Self::from_transport(TransportStream::TlsClient(stream))
+    }
+
+    /// Wrap a duplex stream (used for WebSocket bridging).
+    pub fn new_duplex(stream: tokio::io::DuplexStream) -> Self {
+        Self::from_transport(TransportStream::Duplex(stream))
     }
 
     fn from_transport(stream: TransportStream) -> Self {

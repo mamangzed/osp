@@ -20,7 +20,7 @@ owl-sync = { workspace = true }
 owl-storage = { workspace = true }
 owl-auth = { workspace = true }
 owl-protocol = { workspace = true }
-owl-transport = { workspace = true }
+owl-transport = { workspace = true, features = ["websocket"] }
 owl-query = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
@@ -37,3 +37,9 @@ rand = "0.8"
 futures = { workspace = true }
 bytes = { workspace = true }
 chrono = { workspace = true }
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true }
+
+[features]
+default = ["websocket"]
+websocket = ["owl-transport/websocket"]

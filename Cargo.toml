@@ -109,6 +109,10 @@ parking_lot = "0.12"
 dashmap = "6"
 parking_lot_mutex = "0.2"
 
+# WebSocket
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
