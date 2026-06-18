@@ -2,7 +2,7 @@
  * Long-running Backend Worker
  *
  * This worker:
- * 1. Connects to OSP server
+ * 1. Connects to OSP server (TCP + protobuf)
  * 2. Subscribes to collections
  * 3. Processes incoming operations
  * 4. Applies business logic
@@ -10,7 +10,7 @@
  */
 
 import dotenv from 'dotenv';
-import { OspClient } from './osp-client.js';
+import { OSPClient } from '@owl/osp-sdk';
 
 dotenv.config();
 
@@ -20,12 +20,13 @@ const db = {
   counters: new Map()
 };
 
-// Initialize OSP client
-const osp = new OspClient(
-  process.env.OSP_HOST || 'localhost',
-  process.env.OSP_WS_PORT || 9421,
-  process.env.OSP_TOKEN || 'your-secret-token'
-);
+// Initialize OSP client (TCP connection with protobuf)
+const osp = new OSPClient({
+  host: process.env.OSP_HOST || 'localhost',
+  port: parseInt(process.env.OSP_PORT || '9420'),
+  token: process.env.OSP_TOKEN || 'your-secret-token',
+  deviceId: 'worker-' + Date.now()
+});
 
 // Business logic handlers
 const handlers = {
@@ -105,8 +106,15 @@ const handlers = {
 };
 
 // Event handlers
-osp.on('patch', async (data) => {
-  const { collection, recordId, fields } = data;
+osp.on('patch', async (operation) => {
+  const collection = operation.collection;
+  const recordId = operation.recordId;
+
+  // Extract fields from fieldChanges
+  const fields = {};
+  for (const fc of operation.fieldChanges) {
+    fields[fc.fieldName] = fc.newValue;
+  }
 
   console.log(`[Worker] Received PATCH: ${collection}/${recordId}`);
 
@@ -136,8 +144,9 @@ osp.on('patch', async (data) => {
   }
 });
 
-osp.on('delete', async (data) => {
-  const { collection, recordId } = data;
+osp.on('delete', async (operation) => {
+  const collection = operation.collection;
+  const recordId = operation.recordId;
 
   console.log(`[Worker] Received DELETE: ${collection}/${recordId}`);
 
@@ -175,10 +184,10 @@ setInterval(async () => {
 async function main() {
   console.log('[Worker] Starting Node.js OSP Worker...');
   console.log('[Worker] OSP Server:', process.env.OSP_HOST || 'localhost');
-  console.log('[Worker] OSP Port:', process.env.OSP_WS_PORT || 9421);
+  console.log('[Worker] OSP Port:', process.env.OSP_PORT || '9420');
 
   try {
-    // Connect to OSP
+    // Connect to OSP (TCP)
     await osp.connect();
     console.log('[Worker] Connected to OSP server');
 
@@ -198,6 +207,7 @@ async function main() {
 
   } catch (error) {
     console.error('[Worker] Failed to start:', error.message);
+    console.error(error.stack);
     process.exit(1);
   }
 }
