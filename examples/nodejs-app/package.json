@@ -4,9 +4,10 @@
   "description": "Node.js OSP example with long-running backend and browser frontend",
   "type": "module",
   "scripts": {
+    "build:sdk": "cd ../../sdk/nodejs && npm install && npm run build",
     "backend": "node backend/worker.js",
     "frontend": "node backend/server.js",
-    "start": "node backend/server.js"
+    "start": "npm run build:sdk && node backend/server.js"
   },
   "dependencies": {
     "@owl/osp-sdk": "file:../../sdk/nodejs",
