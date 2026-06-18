@@ -11,8 +11,13 @@
 
 import dotenv from 'dotenv';
 import { OSPClient } from '@owl/osp-sdk';
+import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
+
+// Generate a deterministic UUID for stats record
+// This ensures the same worker always updates the same stats record
+const STATS_RECORD_ID = '0193a5b6-c7d8-7e9f-a0b1-c2d3e4f5a6b7';
 
 // Simple in-memory database (use Redis/PostgreSQL in production)
 const db = {
@@ -25,7 +30,7 @@ const osp = new OSPClient({
   host: process.env.OSP_HOST || 'localhost',
   port: parseInt(process.env.OSP_PORT || '9420'),
   token: process.env.OSP_TOKEN || 'your-secret-token',
-  deviceId: 'worker-' + Date.now()
+  deviceId: uuidv4()
 });
 
 // Business logic handlers
@@ -174,7 +179,7 @@ setInterval(async () => {
   };
 
   try {
-    await osp.set('stats', 'worker', stats);
+    await osp.set('stats', STATS_RECORD_ID, stats);
   } catch (error) {
     console.error('[Worker] Failed to update stats:', error.message);
   }
@@ -197,7 +202,7 @@ async function main() {
     console.log('[Worker] Subscribed to collections: todos, counters');
 
     // Send initial stats
-    await osp.set('stats', 'worker', {
+    await osp.set('stats', STATS_RECORD_ID, {
       totalTodos: 0,
       totalCounters: 0,
       startedAt: Date.now()

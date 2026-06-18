@@ -293,8 +293,11 @@ impl OpLogStore for SqliteBackend {
         let coll_s = coll.to_string();
         let out: Result<Option<u64>, String> = tokio::task::spawn_blocking(move || -> Result<Option<u64>, String> {
             let c = conn.lock();
-            let n: Option<i64> = c.query_row("SELECT MAX(lamport) FROM op_log WHERE collection = ?", params![coll_s], |r| r.get(0))
-                .optional().map_err(|e| e.to_string())?;
+            let n: Option<i64> = c.query_row(
+                "SELECT MAX(lamport) FROM op_log WHERE collection = ?",
+                params![coll_s],
+                |r| r.get(0)
+            ).map_err(|e| e.to_string())?;
             Ok(n.map(|x| x as u64))
         }).await.map_err(|e| StorageError::Other(e.to_string()))?;
         out.map(|o| o.map(Lamport)).map_err(StorageError::Other)
