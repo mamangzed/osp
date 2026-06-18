@@ -3,6 +3,32 @@
  * Connects to OSP server via WebSocket
  */
 
+// Simple EventEmitter for browser
+class EventEmitter {
+  constructor() {
+    this.events = new Map();
+  }
+
+  on(event, callback) {
+    if (!this.events.has(event)) {
+      this.events.set(event, []);
+    }
+    this.events.get(event).push(callback);
+  }
+
+  emit(event, ...args) {
+    if (this.events.has(event)) {
+      this.events.get(event).forEach(callback => {
+        try {
+          callback(...args);
+        } catch (err) {
+          console.error(`Error in event handler for ${event}:`, err);
+        }
+      });
+    }
+  }
+}
+
 class OspClient extends EventEmitter {
   constructor(host, port, token) {
     super();
@@ -155,32 +181,6 @@ class OspClient extends EventEmitter {
     if (this.ws) {
       this.ws.close();
       this.ws = null;
-    }
-  }
-}
-
-// Simple EventEmitter for browser
-class EventEmitter {
-  constructor() {
-    this.events = new Map();
-  }
-
-  on(event, callback) {
-    if (!this.events.has(event)) {
-      this.events.set(event, []);
-    }
-    this.events.get(event).push(callback);
-  }
-
-  emit(event, ...args) {
-    if (this.events.has(event)) {
-      this.events.get(event).forEach(callback => {
-        try {
-          callback(...args);
-        } catch (err) {
-          console.error(`Error in event handler for ${event}:`, err);
-        }
-      });
     }
   }
 }

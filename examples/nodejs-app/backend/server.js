@@ -19,6 +19,15 @@ const PORT = process.env.HTTP_PORT || 3000;
 
 // Middleware
 app.use(express.json());
+
+// Set correct MIME types for JavaScript files
+app.use((req, res, next) => {
+  if (req.path.endsWith('.js')) {
+    res.setHeader('Content-Type', 'application/javascript');
+  }
+  next();
+});
+
 app.use(express.static(join(__dirname, '../frontend')));
 
 // Health check
