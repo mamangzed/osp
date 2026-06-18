@@ -86,8 +86,21 @@ export class OSPClient extends EventEmitter {
       this.socket.connect(this.config.port, this.config.host, () => {
         this.connected = true;
         this.sendHello();
-        resolve();
       });
+
+      // Wait for authentication to complete
+      const onAuthOk = () => {
+        this.removeListener('auth_failed', onAuthFailed);
+        resolve();
+      };
+
+      const onAuthFailed = (err: any) => {
+        this.removeListener('connect', onAuthOk);
+        reject(new Error(`Authentication failed: ${JSON.stringify(err)}`));
+      };
+
+      this.once('connect', onAuthOk);
+      this.once('auth_failed', onAuthFailed);
     });
   }
 
