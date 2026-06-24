@@ -1223,6 +1223,7 @@ dependencies = [
  "dashmap",
  "futures",
  "futures-util",
+ "jsonwebtoken",
  "owl-auth",
  "owl-protocol",
  "owl-query",

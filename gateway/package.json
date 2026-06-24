@@ -1,0 +1,18 @@
+{
+  "name": "osp-gateway",
+  "version": "1.0.0",
+  "description": "HTTP API Gateway for OSP - allows PHP backends to use OSP via HTTP",
+  "main": "src/gateway.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/gateway.js",
+    "dev": "node --watch src/gateway.js"
+  },
+  "dependencies": {
+    "@owl/osp-sdk": "file:../sdk/nodejs",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

@@ -1,0 +1,52 @@
+syntax = "proto3";
+package osp.v1;
+
+// Common types shared by all OSP messages.
+
+message VClock {
+  // device_id (UUID string) -> logical clock value
+  map<string, uint64> entries = 1;
+}
+
+message Value {
+  oneof kind {
+    bool null_value = 1;
+    bool bool_value = 2;
+    int64 int_value = 3;
+    double double_value = 4;
+    string string_value = 5;
+    bytes bytes_value = 6;
+    ValueArray array_value = 7;
+    ValueMap object_value = 8;
+  }
+}
+
+message ValueArray {
+  repeated Value items = 1;
+}
+
+message ValueMap {
+  map<string, Value> entries = 1;
+}
+
+message FieldChange {
+  string field_name = 1;
+  Value new_value = 2;
+  uint64 lamport = 3;
+  string writer_device_id = 4; // UUID string
+}
+
+message ErrorInfo {
+  uint32 code = 1;
+  string message = 2;
+  string detail = 3;
+}
+
+// Capability negotiation
+enum Capability {
+  CAPABILITY_UNSPECIFIED = 0;
+  CAPABILITY_COMPRESSION_ZSTD = 1;
+  CAPABILITY_CHUNKING = 2;
+  CAPABILITY_RESUME = 3;
+  CAPABILITY_PRESENCE = 4;
+}

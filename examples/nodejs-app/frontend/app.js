@@ -1,15 +1,13 @@
 /**
  * Todo App Frontend
- *
- * Connects to OSP server for real-time sync
+ * Using OSP Browser SDK (WebSocket + Protobuf)
  */
 
 // Initialize OSP client
-const osp = new OspClient(
-  'localhost',
-  9421,
-  'your-secret-token'
-);
+const osp = new OSP.OSPBrowserClient({
+  url: 'ws://192.168.110.5:9421', // WebSocket URL
+  token: 'your-secret-token'
+});
 
 // Todo state
 const todos = new Map();
@@ -33,6 +31,9 @@ todoInput.addEventListener('keypress', (e) => {
 // OSP event handlers
 osp.on('patch', handlePatch);
 osp.on('delete', handleDelete);
+osp.on('error', (error) => {
+  console.error('[OSP Error]', error);
+});
 
 // Connect to OSP
 async function init() {

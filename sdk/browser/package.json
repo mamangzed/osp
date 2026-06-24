@@ -1,0 +1,43 @@
+{
+  "name": "@owl/osp-sdk-browser",
+  "version": "0.1.0",
+  "description": "Browser SDK for OSP (Owl Sync Protocol) - WebSocket + Protobuf",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "browser": "dist/osp-browser.min.js",
+  "scripts": {
+    "build": "npm run generate:proto && tsc && npm run bundle",
+    "generate:proto": "node scripts/generate-proto.js",
+    "bundle": "rollup -c",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "osp",
+    "sync",
+    "realtime",
+    "offline-first",
+    "websocket",
+    "browser"
+  ],
+  "author": "OWL Team",
+  "license": "MIT",
+  "dependencies": {
+    "protobufjs": "^7.2.6"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@types/node": "^20.0.0",
+    "protobufjs-cli": "^1.1.2",
+    "rollup": "^4.9.6",
+    "typescript": "^5.3.3"
+  },
+  "files": [
+    "dist/**/*",
+    "proto/**/*",
+    "README.md"
+  ]
+}
